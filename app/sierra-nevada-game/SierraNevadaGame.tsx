@@ -31,7 +31,10 @@ const JUMP_FORCE = -11;
 const JUMP_HOLD_DELAY_FRAMES = 9;
 const JUMP_HOLD_FRAMES = 18;
 const JUMP_HOLD_LIFT = 0.55;
-const SPEED = 4;
+const MOBILE_SPEED = 4;
+const WEB_SPEED = 5.5;
+const FIXED_TIMESTEP_MS = 1000 / 60;
+const MAX_ELAPSED_MS = 100;
 
 const PLAYER_SPRITE_SRC = [
   "/assets/images/personaje/001.png",
@@ -590,7 +593,9 @@ export function SierraNevadaGame() {
   const currentTrackRef = useRef<MusicTrack | null>(null);
   const keysRef = useRef<Record<string, boolean>>({});
   const animationRef = useRef<number | null>(null);
-  const gameLoopRef = useRef<() => void>(() => undefined);
+  const gameLoopRef = useRef<(time?: number) => void>(() => undefined);
+  const lastFrameTimeRef = useRef<number | null>(null);
+  const frameAccumulatorRef = useRef(0);
   const runningRef = useRef(false);
   const levelRef = useRef(1);
   const scoreRef = useRef(0);
@@ -623,6 +628,11 @@ export function SierraNevadaGame() {
   const [aiInput, setAiInput] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const aiEndRef = useRef<HTMLDivElement>(null);
+
+  const resetGameClock = useCallback(() => {
+    lastFrameTimeRef.current = null;
+    frameAccumulatorRef.current = 0;
+  }, []);
   const aiCurrentAnimal = useRef<Animal | null>(null);
   const [lessonAnimals, setLessonAnimals] = useState<Animal[]>([]);
   const [lessonIndex, setLessonIndex] = useState(0);
@@ -1210,6 +1220,7 @@ export function SierraNevadaGame() {
   const openChest = useCallback(() => {
     runningRef.current = false;
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    resetGameClock();
     setQuizzes(createQuizForAnimals(collectedRef.current));
     setQuizIndex(0);
     setQuizScore(0);
@@ -1224,7 +1235,7 @@ export function SierraNevadaGame() {
     setMatchDone([]);
     setQuizAttempts(0);
     setScreen("quiz");
-  }, []);
+  }, [resetGameClock]);
 
   const collectAnimal = useCallback((sprite: AnimalSprite) => {
     const runtime = runtimeRef.current;
@@ -1262,13 +1273,15 @@ export function SierraNevadaGame() {
     const runtime = runtimeRef.current;
     const { player } = runtime;
     const keys = keysRef.current;
+    const movingLeft = keys.ArrowLeft || keys.KeyA || keys.mobileLeft;
+    const movingRight = keys.ArrowRight || keys.KeyD || keys.mobileRight;
+    const baseSpeed = keys.mobileLeft || keys.mobileRight ? MOBILE_SPEED : WEB_SPEED;
+    const currentSpeed = activeEffectRef.current?.kind === "speed" && activeEffectRef.current.until > Date.now() ? baseSpeed * 1.9 : baseSpeed;
 
-    if (keys.ArrowLeft || keys.KeyA || keys.mobileLeft) {
-      const currentSpeed = activeEffectRef.current?.kind === "speed" && activeEffectRef.current.until > Date.now() ? SPEED * 1.9 : SPEED;
+    if (movingLeft) {
       player.vx = -currentSpeed;
       player.facing = -1;
-    } else if (keys.ArrowRight || keys.KeyD || keys.mobileRight) {
-      const currentSpeed = activeEffectRef.current?.kind === "speed" && activeEffectRef.current.until > Date.now() ? SPEED * 1.9 : SPEED;
+    } else if (movingRight) {
       player.vx = currentSpeed;
       player.facing = 1;
     } else {
@@ -1472,22 +1485,36 @@ export function SierraNevadaGame() {
     });
   }, []);
 
-  const gameLoop = useCallback(() => {
+  const gameLoop = useCallback((time = performance.now()) => {
     if (!runningRef.current) return;
-    // Expire active effect
-    if (activeEffectRef.current && activeEffectRef.current.until < Date.now()) {
-      activeEffectRef.current = null;
-      setActiveEffect(null);
+
+    if (lastFrameTimeRef.current === null) {
+      lastFrameTimeRef.current = time;
     }
-    updatePlayer();
-    updatePickups();
-    updateParticles();
+
+    const elapsed = Math.min(time - lastFrameTimeRef.current, MAX_ELAPSED_MS);
+    lastFrameTimeRef.current = time;
+    frameAccumulatorRef.current += elapsed;
+
+    while (frameAccumulatorRef.current >= FIXED_TIMESTEP_MS) {
+      // Expire active effect
+      if (activeEffectRef.current && activeEffectRef.current.until < Date.now()) {
+        activeEffectRef.current = null;
+        setActiveEffect(null);
+      }
+      updatePlayer();
+      updatePickups();
+      updateParticles();
+      frameAccumulatorRef.current -= FIXED_TIMESTEP_MS;
+    }
+
     draw();
     animationRef.current = requestAnimationFrame(gameLoopRef.current);
   }, [draw, updateParticles, updatePickups, updatePlayer]);
 
   const startGame = useCallback((reset: boolean) => {
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    resetGameClock();
     runningRef.current = false;
 
     if (reset) {
@@ -1498,14 +1525,15 @@ export function SierraNevadaGame() {
 
     setupLevel(reset ? 1 : levelRef.current);
     setScreen("lesson");
-  }, [setLearnedValue, setLevelValue, setScoreValue, setupLevel]);
+  }, [resetGameClock, setLearnedValue, setLevelValue, setScoreValue, setupLevel]);
 
   const beginLevel = useCallback(() => {
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    resetGameClock();
     runningRef.current = true;
     setScreen("playing");
     animationRef.current = requestAnimationFrame(gameLoopRef.current);
-  }, []);
+  }, [resetGameClock]);
 
   const goLesson = useCallback((direction: 1 | -1) => {
     setLessonAnim(direction === 1 ? "right" : "left");
@@ -1664,8 +1692,9 @@ export function SierraNevadaGame() {
     setPlayerProfile(null);
     runningRef.current = false;
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    resetGameClock();
     setScreen("login");
-  }, [setLearnedValue, setLevelValue, setScoreValue]);
+  }, [resetGameClock, setLearnedValue, setLevelValue, setScoreValue]);
 
   useEffect(() => {
     gameLoopRef.current = gameLoop;
@@ -1804,7 +1833,9 @@ export function SierraNevadaGame() {
       if (document.visibilityState === "hidden" && animationRef.current) {
         cancelAnimationFrame(animationRef.current);
         animationRef.current = null;
+        resetGameClock();
       } else if (document.visibilityState === "visible" && runningRef.current && !animationRef.current) {
+        resetGameClock();
         animationRef.current = requestAnimationFrame(gameLoopRef.current);
       }
     };
@@ -1843,7 +1874,7 @@ export function SierraNevadaGame() {
       window.removeEventListener("keyup", onKeyUp);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [jump, resizeCanvas, setupLevel]);
+  }, [jump, resetGameClock, resizeCanvas, setupLevel]);
 
   // ── AI auto-scroll ─────────────────────────────────────────────────────────
   useEffect(() => {
