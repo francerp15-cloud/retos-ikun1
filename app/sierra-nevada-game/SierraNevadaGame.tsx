@@ -1,7 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimalSymbol, ArrowIcon, ChestIcon, LeafIcon } from "./AnimalSymbol";
+import {
+  AnimalSymbol,
+  ArrowIcon,
+  BackspaceIcon,
+  BotIcon,
+  CheckIcon,
+  ChestIcon,
+  CloseIcon,
+  CoinIcon,
+  HeartIcon,
+  LeafIcon,
+  PauseIcon,
+  PlayIcon,
+  SendIcon,
+  SpeakerIcon,
+  StarIcon,
+  ZapIcon,
+} from "./AnimalSymbol";
 import { ANIMALS_DB, createQuizForAnimals, normalizeAnswer } from "./data";
 import styles from "./SierraNevadaGame.module.css";
 import type { Animal, QuizQuestion, WordSearchQuestion, OrderQuestion, MatchQuestion, ImagePickQuestion, TrueFalseQuestion, SavedSession } from "./types";
@@ -10,7 +27,10 @@ const SESSION_KEY = "guardianes-sierra-nevada-session";
 const WORLD_WIDTH = 3500;
 const TILE = 48;
 const GRAVITY = 0.55;
-const JUMP_FORCE = -13;
+const JUMP_FORCE = -11.4;
+const JUMP_HOLD_DELAY_MS = 130;
+const JUMP_HOLD_MS = 260;
+const JUMP_HOLD_LIFT = 0.16;
 const SPEED = 4;
 
 const PLAYER_SPRITE_SRC = [
@@ -299,6 +319,80 @@ function drawAnimalGlyph(
   ctx.restore();
 }
 
+function renderAiText(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+
+    return part;
+  });
+}
+
+function drawPowerUpGlyph(
+  ctx: CanvasRenderingContext2D,
+  kind: PowerUpKind,
+  x: number,
+  y: number,
+  magnetImg?: HTMLImageElement | null,
+) {
+  if (kind === "magnet" && magnetImg && magnetImg.complete && magnetImg.naturalWidth > 0) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.drawImage(magnetImg, -14, -15, 28, 30);
+    ctx.restore();
+    return;
+  }
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = "#1a1008";
+  ctx.strokeStyle = "#1a1008";
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  if (kind === "speed") {
+    ctx.beginPath();
+    ctx.moveTo(2, -12);
+    ctx.lineTo(-8, 1);
+    ctx.lineTo(-1, 1);
+    ctx.lineTo(-3, 12);
+    ctx.lineTo(9, -3);
+    ctx.lineTo(2, -3);
+    ctx.closePath();
+    ctx.fill();
+  } else if (kind === "magnet") {
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(-8, -9);
+    ctx.lineTo(-8, 2);
+    ctx.bezierCurveTo(-8, 9, 8, 9, 8, 2);
+    ctx.lineTo(8, -9);
+    ctx.stroke();
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-12, -9);
+    ctx.lineTo(-5, -9);
+    ctx.moveTo(5, -9);
+    ctx.lineTo(12, -9);
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    for (let i = 0; i < 10; i += 1) {
+      const radius = i % 2 === 0 ? 12 : 5;
+      const angle = -Math.PI / 2 + (i * Math.PI) / 5;
+      const px = Math.cos(angle) * radius;
+      const py = Math.sin(angle) * radius;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
 function drawPlayer(
   ctx: CanvasRenderingContext2D,
   player: Player,
@@ -490,6 +584,7 @@ export function SierraNevadaGame() {
   const playerSpritesFRef = useRef<HTMLImageElement[]>([]);
   const playerAvatarRef = useRef<"male" | "female">("male");
   const bgImageRef = useRef<HTMLImageElement | null>(null);
+  const magnetImageRef = useRef<HTMLImageElement | null>(null);
   const animalImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const audioRef = useRef<Partial<Record<AudioKey, HTMLAudioElement>>>({});
   const currentTrackRef = useRef<MusicTrack | null>(null);
@@ -502,6 +597,8 @@ export function SierraNevadaGame() {
   const collectedRef = useRef<Animal[]>([]);
   const learnedRef = useRef<string[]>([]);
   const activeEffectRef = useRef<{ kind: PowerUpKind; until: number } | null>(null);
+  const jumpStartedAtRef = useRef(0);
+  const jumpBoostUntilRef = useRef(0);
   const usedAnimalIdsRef = useRef<Set<string>>(new Set());
   const heartsRef = useRef(3); // lives tracking for spike hits // track animals used across levels
 
@@ -1012,7 +1109,6 @@ export function SierraNevadaGame() {
 
     // Draw power-ups
     const puColors: Record<PowerUpKind, string> = { speed: "#ffeb3b", magnet: "#42a5f5", star: "#ff9800" };
-    const puEmoji: Record<PowerUpKind, string> = { speed: "⚡", magnet: "🧲", star: "⭐" };
     const puLabel: Record<PowerUpKind, string> = { speed: "Veloz", magnet: "Imán", star: "Bonus" };
     runtime.powerUps.forEach((pu: PowerUp) => {
       if (pu.collected) return;
@@ -1039,15 +1135,11 @@ export function SierraNevadaGame() {
       ctx.beginPath();
       ctx.arc(px, py, 18, 0, Math.PI * 2);
       ctx.stroke();
-      // Emoji icon
-      ctx.font = "15px system-ui";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(puEmoji[pu.kind], px, py);
-      ctx.textBaseline = "alphabetic";
+      drawPowerUpGlyph(ctx, pu.kind, px, py, magnetImageRef.current);
       // Label
       ctx.fillStyle = "rgba(255,255,255,0.9)";
       ctx.font = "700 9px system-ui";
+      ctx.textAlign = "center";
       ctx.fillText(puLabel[pu.kind], px, py - 26);
     });
 
@@ -1183,7 +1275,13 @@ export function SierraNevadaGame() {
       player.vx = 0;
     }
 
+    const now = Date.now();
+    const holdingJump = keys.Space || keys.ArrowUp || keys.KeyW || keys.mobileJump;
+    const heldLongEnough = jumpStartedAtRef.current > 0 && now - jumpStartedAtRef.current >= JUMP_HOLD_DELAY_MS;
     player.vy += GRAVITY;
+    if (holdingJump && heldLongEnough && jumpBoostUntilRef.current > now && player.vy < 0) {
+      player.vy -= JUMP_HOLD_LIFT;
+    }
     player.x += player.vx;
     player.y += player.vy;
     player.onGround = false;
@@ -1421,6 +1519,9 @@ export function SierraNevadaGame() {
     if (player.onGround) {
       player.vy = JUMP_FORCE;
       player.onGround = false;
+      const now = Date.now();
+      jumpStartedAtRef.current = now;
+      jumpBoostUntilRef.current = now + JUMP_HOLD_MS;
     }
   }, []);
 
@@ -1581,6 +1682,10 @@ export function SierraNevadaGame() {
     bgImg.src = "/assets/images/bg_game.png";
     bgImageRef.current = bgImg;
 
+    const magnetImg = new Image();
+    magnetImg.src = "/assets/images/iman.svg";
+    magnetImageRef.current = magnetImg;
+
     // Preload all animal Ghibli images
     ANIMALS_DB.forEach((animal) => {
       if (animal.image) {
@@ -1715,6 +1820,10 @@ export function SierraNevadaGame() {
       const tag = (event.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
       keysRef.current[event.code] = false;
+      if (event.code === "Space" || event.code === "ArrowUp" || event.code === "KeyW") {
+        jumpStartedAtRef.current = 0;
+        jumpBoostUntilRef.current = 0;
+      }
     };
 
     window.addEventListener("resize", onResize);
@@ -1749,6 +1858,14 @@ export function SierraNevadaGame() {
     keysRef.current[key] = value;
   };
 
+  const setMobileJump = (value: boolean) => {
+    keysRef.current.mobileJump = value;
+    if (!value) {
+      jumpStartedAtRef.current = 0;
+      jumpBoostUntilRef.current = 0;
+    }
+  };
+
   // ── AI sendMessage ─────────────────────────────────────────────────────────
   const sendAiMessage = useCallback(async (text: string) => {
     if (!text.trim() || aiLoading) return;
@@ -1772,8 +1889,8 @@ export function SierraNevadaGame() {
 
       // 1. "¿Qué animal estoy viendo?" / "qué es este animal"
       if (/que animal|que es este|que veo|que estoy viendo|este animal/.test(q)) {
-        if (ctx) return `🌿 ${ctx}`;
-        return "🌿 Ahora mismo no estoy seguro qué animal estás mirando. Pasa a la pantalla de lección para ver sus detalles.";
+        if (ctx) return ctx;
+        return "Ahora mismo no estoy seguro qué animal estás mirando. Pasa a la pantalla de lección para ver sus detalles.";
       }
 
       // 2. Pronunciation / "cómo se pronuncia" / "cómo se dice"
@@ -1794,10 +1911,10 @@ export function SierraNevadaGame() {
             Zeyku:"ZEY-koo", Mawunsiro:"mah-WOON-see-roh", Urumu:"oo-ROO-moo", Munkwu:"MOON-kwoo",
           };
           const pron = phon[found.nameArh] ?? found.nameArh.toUpperCase().split("").join("-");
-          return `🗣️ El ${found.nameEs} se llama **${found.nameArh}** en lengua Iku.\n\nSe pronuncia aproximadamente: (${pron})\n\nEn Iku, cada vocal se pronuncia claramente y las consonantes son suaves. ¡Intenta decirlo lento!`;
+          return `El ${found.nameEs} se llama **${found.nameArh}** en lengua Iku.\n\nSe pronuncia aproximadamente: (${pron})\n\nEn Iku, cada vocal se pronuncia claramente y las consonantes son suaves. ¡Intenta decirlo lento!`;
         }
         const list = ANIMALS_DB.slice(0, 8).map(a => `• ${a.nameEs} → **${a.nameArh}**`).join("\n");
-        return `🗣️ Aquí algunos nombres en Iku:\n\n${list}\n\n¿Sobre cuál quieres saber la pronunciación?`;
+        return `Aquí algunos nombres en Iku:\n\n${list}\n\n¿Sobre cuál quieres saber la pronunciación?`;
       }
 
       // 3. Specific animal lookup
@@ -1806,51 +1923,51 @@ export function SierraNevadaGame() {
         q.includes(a.nameArh.toLowerCase())
       );
       if (animalMatch) {
-        return `🌿 **${animalMatch.nameEs}** — *${animalMatch.nameArh}* en Iku (${animalMatch.type})\n\n${animalMatch.desc}`;
+        return `**${animalMatch.nameEs}** — *${animalMatch.nameArh}* en Iku (${animalMatch.type})\n\n${animalMatch.desc}`;
       }
 
       // 4. Sierra Nevada
       if (/sierra nevada|sierra|montana|montaña/.test(q)) {
-        return "🏔️ La Sierra Nevada de Santa Marta es la montaña costera más alta del mundo, con picos que llegan a 5.775 m. Es el hogar de los pueblos Arhuaco (Iku), Kogi, Wiwa y Kankuamo. La consideran el \"corazón del mundo\" y sus guardianes son responsables de cuidar el equilibrio de la naturaleza.";
+        return "La Sierra Nevada de Santa Marta es la montaña costera más alta del mundo, con picos que llegan a 5.775 m. Es el hogar de los pueblos Arhuaco (Iku), Kogi, Wiwa y Kankuamo. La consideran el \"corazón del mundo\" y sus guardianes son responsables de cuidar el equilibrio de la naturaleza.";
       }
 
       // 5. Iku language / Arhuaco culture
       if (/iku|arhuaco|arhuaca|lengua|idioma/.test(q)) {
-        return "📚 El **Iku** es la lengua del pueblo Arhuaco de la Sierra Nevada. Es una lengua de la familia Chibcha con sonidos únicos como la ü y consonantes aspiradas. Los Arhuacos la llaman \"la lengua de la Sierra\" y es fundamental para su espiritualidad, pues los nombres en Iku describen la esencia profunda de cada ser vivo.";
+        return "El **Iku** es la lengua del pueblo Arhuaco de la Sierra Nevada. Es una lengua de la familia Chibcha con sonidos únicos como la ü y consonantes aspiradas. Los Arhuacos la llaman \"la lengua de la Sierra\" y es fundamental para su espiritualidad, pues los nombres en Iku describen la esencia profunda de cada ser vivo.";
       }
 
       // 6. Mamo / Mamos / spiritual leaders
       if (/mamo|lider|sabio|espiritual|cosmolog/.test(q)) {
-        return "🧘 Los **Mamos** son los líderes espirituales del pueblo Arhuaco. Estudian desde niños la ley de origen y son los guardianes del conocimiento ancestral. Interpretan los sueños, cuidan el equilibrio de la naturaleza y mantienen la comunicación con los seres espirituales de la Sierra.";
+        return "Los **Mamos** son los líderes espirituales del pueblo Arhuaco. Estudian desde niños la ley de origen y son los guardianes del conocimiento ancestral. Interpretan los sueños, cuidan el equilibrio de la naturaleza y mantienen la comunicación con los seres espirituales de la Sierra.";
       }
 
       // 7. Mochila / tejido
       if (/mochila|tejido|kankurwa|artesania/.test(q)) {
-        return "🧶 La **mochila Arhuaca** (o kankurwa) es tejida a mano con algodón o lana de oveja. Cada diseño geométrico cuenta una historia y tiene un significado espiritual. Las mujeres tejen las mochilas como práctica meditativa; cada punto es una reflexión. Son símbolo de identidad y resistencia cultural.";
+        return "La **mochila Arhuaca** (o kankurwa) es tejida a mano con algodón o lana de oveja. Cada diseño geométrico cuenta una historia y tiene un significado espiritual. Las mujeres tejen las mochilas como práctica meditativa; cada punto es una reflexión. Son símbolo de identidad y resistencia cultural.";
       }
 
       // 8. Animals list
       if (/cuales animales|que animales|lista|todos los animales/.test(q)) {
         const list = ANIMALS_DB.map(a => `• ${a.nameEs} (${a.nameArh})`).join("\n");
-        return `🦎 Animales de la Sierra Nevada en el juego:\n\n${list}`;
+        return `Animales de la Sierra Nevada en el juego:\n\n${list}`;
       }
 
       // 9. Player progress
       if (/progreso|nivel|puntos|cuantos aprendi/.test(q)) {
-        return `⭐ Llevas ${learnedCount} animales aprendidos y estás en el nivel ${currentLevel}. ¡Sigue explorando la Sierra para conocer más especies!`;
+        return `Llevas ${learnedCount} animales aprendidos y estás en el nivel ${currentLevel}. ¡Sigue explorando la Sierra para conocer más especies!`;
       }
 
       // 10. Help / what can you do
       if (/ayuda|que puedes|que sabes|para que sirves/.test(q)) {
-        return "🌿 Puedo ayudarte con:\n\n• 🗣️ Pronunciar nombres en lengua Iku\n• 🦎 Datos sobre cualquier animal de la Sierra\n• 🏔️ Historia y cultura Arhuaca\n• 📚 Significado de la lengua Iku\n• 🧶 Tradiciones como la mochila y los Mamos\n\n¡Pregúntame lo que quieras!";
+        return "Puedo ayudarte con:\n\n• Pronunciar nombres en lengua Iku\n• Datos sobre cualquier animal de la Sierra\n• Historia y cultura Arhuaca\n• Significado de la lengua Iku\n• Tradiciones como la mochila y los Mamos\n\n¡Pregúntame lo que quieras!";
       }
 
       // Default fallback
       const tips = [
-        `🌿 ¿Sabías que la Sierra Nevada tiene más de 600 especies de animales? Pregúntame sobre cualquiera de los que aparecen en el juego.`,
-        `🗣️ El pueblo Arhuaco llama a su lengua "Iku". ¿Quieres aprender a pronunciar algún nombre?`,
-        `🏔️ La Sierra Nevada de Santa Marta es considerada el corazón del mundo por los pueblos indígenas. ¿Quieres saber más?`,
-        `🦎 Hay ${ANIMALS_DB.length} animales en el juego. ¡Intenta preguntarme sobre uno específico!`,
+        `¿Sabías que la Sierra Nevada tiene más de 600 especies de animales? Pregúntame sobre cualquiera de los que aparecen en el juego.`,
+        `El pueblo Arhuaco llama a su lengua "Iku". ¿Quieres aprender a pronunciar algún nombre?`,
+        `La Sierra Nevada de Santa Marta es considerada el corazón del mundo por los pueblos indígenas. ¿Quieres saber más?`,
+        `Hay ${ANIMALS_DB.length} animales en el juego. ¡Intenta preguntarme sobre uno específico!`,
       ];
       return tips[Math.floor(Math.random() * tips.length)];
     };
@@ -1913,7 +2030,7 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
           <div className={styles.hudHearts}>
             {Array.from({ length: 3 }).map((_, i) => (
               <span key={i} className={`${styles.hudHeart} ${i >= hearts ? styles.hudHeartEmpty : ""}`}>
-                {i < hearts ? "❤️" : "🖤"}
+                <HeartIcon size={18} filled={i < hearts} />
               </span>
             ))}
           </div>
@@ -1930,11 +2047,11 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
         {/* Right: coin counter + pause */}
         <div className={styles.hudRight}>
           <div className={styles.hudCoinBadge}>
-            <span className={styles.hudCoinIcon}>🪙</span>
+            <CoinIcon size={22} className={styles.hudCoinIcon} />
             <span>x {score}</span>
           </div>
           <button className={styles.hudPauseBtn} type="button" onClick={resetSession} title="Zukutu">
-            ⏸
+            <PauseIcon size={20} />
           </button>
         </div>
       </section>
@@ -1948,12 +2065,19 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
             </div>
           );
         })}
-        <span className={styles.slotHelp}>Ana'nuga 5 nʉnkunu — kankurwa nʉjwase'!</span>
+        <span className={styles.slotHelp}>Ana&apos;nuga 5 nʉnkunu — kankurwa nʉjwase&apos;!</span>
       </section>
 
-      {screen === "playing" && activeEffect && activeEffect.until > Date.now() ? (
+      {screen === "playing" && activeEffect ? (
         <div className={`${styles.activeEffectBadge} ${styles[`effect_${activeEffect.kind}`]}`}>
-          {activeEffect.kind === "speed" ? "⚡ ¡Velocidad!" : activeEffect.kind === "magnet" ? "🧲 ¡Imán activo!" : "⭐ ¡+30 Bonus!"}
+          {activeEffect.kind === "speed" ? (
+            <ZapIcon size={18} />
+          ) : activeEffect.kind === "magnet" ? (
+            <img className={styles.effectIconImg} src="/assets/images/iman.svg" alt="" />
+          ) : (
+            <StarIcon size={18} />
+          )}
+          <span>{activeEffect.kind === "speed" ? "¡Velocidad!" : activeEffect.kind === "magnet" ? "¡Imán activo!" : "¡+30 Bonus!"}</span>
         </div>
       ) : null}
 
@@ -1963,9 +2087,14 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
             className={styles.controlButton}
             type="button"
             aria-label="Mover a la izquierda"
-            onPointerDown={() => setMobileKey("mobileLeft", true)}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              setMobileKey("mobileLeft", true);
+            }}
             onPointerUp={() => setMobileKey("mobileLeft", false)}
             onPointerLeave={() => setMobileKey("mobileLeft", false)}
+            onPointerCancel={() => setMobileKey("mobileLeft", false)}
+            onContextMenu={(event) => event.preventDefault()}
           >
             <ArrowIcon direction="left" />
           </button>
@@ -1973,15 +2102,33 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
             className={styles.controlButton}
             type="button"
             aria-label="Mover a la derecha"
-            onPointerDown={() => setMobileKey("mobileRight", true)}
+            onPointerDown={(event) => {
+              event.preventDefault();
+              setMobileKey("mobileRight", true);
+            }}
             onPointerUp={() => setMobileKey("mobileRight", false)}
             onPointerLeave={() => setMobileKey("mobileRight", false)}
+            onPointerCancel={() => setMobileKey("mobileRight", false)}
+            onContextMenu={(event) => event.preventDefault()}
           >
             <ArrowIcon direction="right" />
           </button>
         </div>
         <div className={styles.mobileGroup}>
-          <button className={styles.controlButton} type="button" aria-label="Saltar" onPointerDown={jump}>
+          <button
+            className={styles.controlButton}
+            type="button"
+            aria-label="Saltar"
+            onPointerDown={(event) => {
+              event.preventDefault();
+              setMobileJump(true);
+              jump();
+            }}
+            onPointerUp={() => setMobileJump(false)}
+            onPointerLeave={() => setMobileJump(false)}
+            onPointerCancel={() => setMobileJump(false)}
+            onContextMenu={(event) => event.preventDefault()}
+          >
             <ArrowIcon direction="up" />
           </button>
         </div>
@@ -1998,7 +2145,7 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
               </div>
               <div className={styles.splashContent}>
                 <div className={styles.splashStartBtn} onClick={() => setLoginStep(2)}>
-                  <span className={styles.splashStartBtnIcon}>▶</span>
+                  <PlayIcon size={18} className={styles.splashStartBtnIcon} />
                   INICIAR
                 </div>
               </div>
@@ -2012,9 +2159,9 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
               <div className={styles.charSelectWrapper}>
                 {/* Title */}
                 <div className={styles.charSelectHeading}>
-                  <span className={styles.charSelectDiamond}>✦</span>
+                  <span className={styles.charSelectDiamond} aria-hidden="true" />
                   AZI AWI ZAKACHOZɄNDI
-                  <span className={styles.charSelectDiamond}>✦</span>
+                  <span className={styles.charSelectDiamond} aria-hidden="true" />
                 </div>
 
                 {/* Name input */}
@@ -2083,11 +2230,13 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
                     setScreen("start");
                   }}
                 >
-                  🌿 Ka'gʉmʉse' zukutu
+                  <LeafIcon size={18} />
+                  <span>Ka&apos;gʉmʉse&apos; zukutu</span>
                 </button>
 
                 <button className={styles.charBackBtn} type="button" onClick={() => setLoginStep(1)}>
-                  ← Volver
+                  <ArrowIcon direction="left" />
+                  <span>Volver</span>
                 </button>
               </div>
             </section>
@@ -2105,7 +2254,10 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
             {playerProfile ? (
               <p className={styles.playerGreeting}>
                 <span className={styles.playerGreetingAvatar}>
-                  {playerProfile.avatar === "male" ? "👨‍🌿" : "👩‍🌿"}
+                  <img
+                    src={playerProfile.avatar === "female" ? "/assets/images/personaje/f001.png" : "/assets/images/personaje/001.png"}
+                    alt=""
+                  />
                 </span>
                 Ey, <strong>{playerProfile.name}</strong>
               </p>
@@ -2154,7 +2306,7 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
                 <LeafIcon size={14} /> Lección · Nivel {level}
               </p>
               <h2 id="lesson-title" className={styles.lessonTitle}>
-                Ana'nuga jina nʉnkunu
+                Ana&apos;nuga jina nʉnkunu
               </h2>
               <p className={styles.lessonHint}>
                 Ɉʉnkunu zukutu, kwintʉro zakachozʉndi.
@@ -2164,7 +2316,7 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
             {lessonAnimals.length === 0 ? (
               <div className={styles.lessonFooter} style={{ justifyContent: "center", marginTop: "24px" }}>
                 <button className={styles.primaryButton} type="button" onClick={beginLevel}>
-                  Ka'gʉmʉse' zukutu
+                  Ka&apos;gʉmʉse&apos; zukutu
                 </button>
               </div>
             ) : null}
@@ -2225,7 +2377,7 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
                                 audio.play();
                               }}
                             >
-                              🔊
+                              <SpeakerIcon size={18} />
                             </button>
                           )}
                         </div>
@@ -2328,7 +2480,7 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
               {!quizDone ? (
                 <p className={styles.modalSubtitle}>
                   {quizAttempts >= MAX_ATTEMPTS
-                    ? "Agotaste los intentos. Regresarás a ver los animales de nuevo. 🌿"
+                    ? "Agotaste los intentos. Regresarás a ver los animales de nuevo."
                     : `${collected.length} ana'nuga nʉnkusʉ. Zukutu zakachozʉndi!`}
                 </p>
               ) : null}
@@ -2420,7 +2572,10 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
                     {/* Iku keyboard */}
                     {!selectedAnswer && (
                       <div className={styles.ikuKeyboard}>
-                        <div className={styles.ikuKeyboardLabel}>🌿 Letras Iku</div>
+                        <div className={styles.ikuKeyboardLabel}>
+                          <LeafIcon size={13} />
+                          <span>Letras Iku</span>
+                        </div>
                         <div className={styles.ikuKeyboardKeys}>
                           {["a","b","ch","d","e","g","i","j","ɉ","k","m","n","o","p","r","s","t","u","ʉ","w","y","z","'"].map((letter) => (
                             <button
@@ -2440,7 +2595,7 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
                             disabled={Boolean(selectedAnswer)}
                             title="Borrar"
                           >
-                            ⌫
+                            <BackspaceIcon size={17} />
                           </button>
                         </div>
                       </div>
@@ -2538,7 +2693,10 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
                         ))}
                       </div>
                       {!done && orderPlaced.length > 0 && (
-                        <button type="button" className={styles.orderUndo} onClick={handleRemoveLast}>↩ Borrar última</button>
+                        <button type="button" className={styles.orderUndo} onClick={handleRemoveLast}>
+                          <BackspaceIcon size={16} />
+                          <span>Borrar última</span>
+                        </button>
                       )}
                     </div>
                   );
@@ -2548,8 +2706,6 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
                 {currentQuiz.type === "match" && (() => {
                   const q = currentQuiz as MatchQuestion;
                   const done = Boolean(selectedAnswer) || matchDone.length === q.pairs.length;
-                  const shuffledEs = (() => { const seen = matchDone.map(d => d.es); return shuffle(q.pairs.map(p => p.es)).filter(e => !seen.includes(e)); })();
-                  const remainingIku = q.pairs.filter(p => !matchDone.some(d => d.iku === p.iku));
                   const handleIku = (iku: string) => { if (done) return; setMatchLeft(iku === matchLeft ? null : iku); };
                   const handleEs = (es: string) => {
                     if (done || !matchLeft) return;
@@ -2578,25 +2734,30 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
                             const isDone = matchDone.some(d => d.iku === p.iku);
                             return (
                               <button key={p.iku} type="button" className={`${styles.matchChip} ${matchLeft === p.iku ? styles.matchChipActive : ""} ${isDone ? styles.matchChipDone : ""}`} onClick={() => handleIku(p.iku)} disabled={done || isDone}>
-                                🌿 {p.iku}
+                                <LeafIcon size={15} />
+                                <span>{p.iku}</span>
                               </button>
                             );
                           })}
                         </div>
-                        <div className={styles.matchArrow}>→</div>
+                        <div className={styles.matchArrow}><ArrowIcon direction="right" /></div>
                         <div className={styles.matchCol}>
                           {shuffle(q.pairs.map(p => p.es)).map(es => {
                             const isDone = matchDone.some(d => d.es === es);
                             return (
                               <button key={es} type="button" className={`${styles.matchChip} ${styles.matchChipRight} ${isDone ? styles.matchChipDone : ""}`} onClick={() => handleEs(es)} disabled={done || isDone || !matchLeft}>
-                                🦎 {es}
+                                <AnimalSymbol type="reptil" size={18} />
+                                <span>{es}</span>
                               </button>
                             );
                           })}
                         </div>
                       </div>
                       {matchDone.length > 0 && !done && (
-                        <div className={styles.matchProgress}>✓ {matchDone.length} / {q.pairs.length} emparejados</div>
+                        <div className={styles.matchProgress}>
+                          <CheckIcon size={15} />
+                          <span>{matchDone.length} / {q.pairs.length} emparejados</span>
+                        </div>
                       )}
                     </div>
                   );
@@ -2638,8 +2799,14 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
                     <div className={styles.trueFalseWrap}>
                       <div className={styles.tfStatement}>{q.statement}</div>
                       <div className={styles.tfButtons}>
-                        <button type="button" className={`${styles.tfBtn} ${styles.tfTrue} ${selectedAnswer === "true" ? (q.answer ? styles.correct : styles.wrong) : ""}`} onClick={() => handleTF(true)} disabled={done}>✅ Ey</button>
-                        <button type="button" className={`${styles.tfBtn} ${styles.tfFalse} ${selectedAnswer === "false" ? (!q.answer ? styles.correct : styles.wrong) : ""}`} onClick={() => handleTF(false)} disabled={done}>❌ Awi</button>
+                        <button type="button" className={`${styles.tfBtn} ${styles.tfTrue} ${selectedAnswer === "true" ? (q.answer ? styles.correct : styles.wrong) : ""}`} onClick={() => handleTF(true)} disabled={done}>
+                          <CheckIcon size={20} />
+                          <span>Ey</span>
+                        </button>
+                        <button type="button" className={`${styles.tfBtn} ${styles.tfFalse} ${selectedAnswer === "false" ? (!q.answer ? styles.correct : styles.wrong) : ""}`} onClick={() => handleTF(false)} disabled={done}>
+                          <CloseIcon size={20} />
+                          <span>Awi</span>
+                        </button>
                       </div>
                     </div>
                   );
@@ -2664,119 +2831,123 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
         </section>
       ) : null}
       {/* ── AI Assistant ─────────────────────────────────────────────── */}
-      <button
-        className={`${styles.aiFloatBtn} ${aiOpen ? styles.aiFloatBtnOpen : ""}`}
-        type="button"
-        aria-label={aiOpen ? "Cerrar asistente" : "Abrir asistente Kogi"}
-        onClick={() => {
-          setAiOpen((v) => {
-            if (!v && aiMsgs.length === 0) {
-              // Welcome message
-              setAiMsgs([{
-                role: "assistant",
-                text: "¡Hola! Soy Kogi 🌿, tu guía cultural. Puedo ayudarte a pronunciar los nombres en Iku, contarte sobre los animales de la Sierra Nevada y explicarte su importancia para la cultura Arhuaca. ¿Qué quieres saber?",
-              }]);
-            }
-            return !v;
-          });
-        }}
-      >
-        {aiOpen ? "✕" : "🤖"}
-      </button>
+      {screen !== "lesson" && screen !== "quiz" ? (
+        <>
+          <button
+            className={`${styles.aiFloatBtn} ${aiOpen ? styles.aiFloatBtnOpen : ""}`}
+            type="button"
+            aria-label={aiOpen ? "Cerrar asistente" : "Abrir asistente Kogi"}
+            onClick={() => {
+              setAiOpen((v) => {
+                if (!v && aiMsgs.length === 0) {
+                  // Welcome message
+                  setAiMsgs([{
+                    role: "assistant",
+                    text: "¡Hola! Soy Kogi, tu guía cultural. Puedo ayudarte a pronunciar los nombres en Iku, contarte sobre los animales de la Sierra Nevada y explicarte su importancia para la cultura Arhuaca. ¿Qué quieres saber?",
+                  }]);
+                }
+                return !v;
+              });
+            }}
+          >
+            {aiOpen ? <CloseIcon size={22} /> : <BotIcon size={25} />}
+          </button>
 
-      {aiOpen ? (
-        <div className={styles.aiPanel} role="dialog" aria-label="Asistente Kogi">
-          <div className={styles.aiHeader}>
-            <span className={styles.aiAvatar}>🌿</span>
-            <div>
-              <div className={styles.aiName}>Kogi</div>
-              <div className={styles.aiSubtitle}>Guía cultural · Sierra Nevada</div>
-            </div>
-          </div>
-
-          <div className={styles.aiMessages}>
-            {aiMsgs.map((msg, i) => (
-              <div key={i} className={`${styles.aiMsg} ${msg.role === "user" ? styles.aiMsgUser : styles.aiMsgBot}`}>
-                {msg.role === "assistant" && <span className={styles.aiMsgAvatar}>🌿</span>}
-                <div className={styles.aiMsgBubble}>{msg.text}</div>
-              </div>
-            ))}
-            {aiLoading ? (
-              <div className={`${styles.aiMsg} ${styles.aiMsgBot}`}>
-                <span className={styles.aiMsgAvatar}>🌿</span>
-                <div className={`${styles.aiMsgBubble} ${styles.aiTyping}`}>
-                  <span /><span /><span />
+          {aiOpen ? (
+            <div className={styles.aiPanel} role="dialog" aria-label="Asistente Kogi">
+              <div className={styles.aiHeader}>
+                <span className={styles.aiAvatar}><LeafIcon size={22} /></span>
+                <div>
+                  <div className={styles.aiName}>Kogi</div>
+                  <div className={styles.aiSubtitle}>Guía cultural · Sierra Nevada</div>
                 </div>
               </div>
-            ) : null}
-            <div ref={aiEndRef} />
-          </div>
 
-          {/* Quick prompts */}
-          {aiMsgs.length <= 1 ? (
-            <div className={styles.aiQuickRow}>
-              {[
-                "¿Cómo se pronuncia el nombre Iku?",
-                "¿Qué animal estoy viendo?",
-                "Cuéntame sobre la Sierra Nevada",
-                "¿Qué significa Iku?",
-              ].map((q) => (
-                <button key={q} className={styles.aiQuickBtn} type="button" onClick={() => sendAiMessage(q)}>
-                  {q}
+              <div className={styles.aiMessages}>
+                {aiMsgs.map((msg, i) => (
+                  <div key={i} className={`${styles.aiMsg} ${msg.role === "user" ? styles.aiMsgUser : styles.aiMsgBot}`}>
+                    {msg.role === "assistant" && <span className={styles.aiMsgAvatar}><LeafIcon size={16} /></span>}
+                    <div className={styles.aiMsgBubble}>{renderAiText(msg.text)}</div>
+                  </div>
+                ))}
+                {aiLoading ? (
+                  <div className={`${styles.aiMsg} ${styles.aiMsgBot}`}>
+                    <span className={styles.aiMsgAvatar}><LeafIcon size={16} /></span>
+                    <div className={`${styles.aiMsgBubble} ${styles.aiTyping}`}>
+                      <span /><span /><span />
+                    </div>
+                  </div>
+                ) : null}
+                <div ref={aiEndRef} />
+              </div>
+
+              {/* Quick prompts */}
+              {aiMsgs.length <= 1 ? (
+                <div className={styles.aiQuickRow}>
+                  {[
+                    "¿Cómo se pronuncia el nombre Iku?",
+                    "¿Qué animal estoy viendo?",
+                    "Cuéntame sobre la Sierra Nevada",
+                    "¿Qué significa Iku?",
+                  ].map((q) => (
+                    <button key={q} className={styles.aiQuickBtn} type="button" onClick={() => sendAiMessage(q)}>
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className={styles.aiInputRow}>
+                <input
+                  className={styles.aiInput}
+                  value={aiInput}
+                  onChange={(e) => setAiInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      sendAiMessage(aiInput);
+                    }
+                  }}
+                  placeholder="Jina zukutu..."
+                  disabled={aiLoading}
+                  autoComplete="off"
+                />
+                <button
+                  className={styles.aiSendBtn}
+                  type="button"
+                  disabled={aiLoading || !aiInput.trim()}
+                  onClick={() => sendAiMessage(aiInput)}
+                >
+                  <SendIcon size={18} />
                 </button>
-              ))}
+              </div>
+
+              {/* Iku keyboard for bot */}
+              <div className={styles.aiIkuKeyboard}>
+                {["a","b","ch","d","e","g","i","j","ɉ","k","m","n","o","p","r","s","t","u","ʉ","w","y","z","'"].map((letter) => (
+                  <button
+                    key={letter}
+                    type="button"
+                    className={styles.aiIkuKey}
+                    onClick={() => setAiInput((prev) => prev + letter)}
+                    disabled={aiLoading}
+                  >
+                    {letter}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className={`${styles.aiIkuKey} ${styles.aiIkuKeyDel}`}
+                  onClick={() => setAiInput((prev) => prev.slice(0, -1))}
+                  disabled={aiLoading}
+                >
+                  <BackspaceIcon size={15} />
+                </button>
+              </div>
             </div>
           ) : null}
-
-          <div className={styles.aiInputRow}>
-            <input
-              className={styles.aiInput}
-              value={aiInput}
-              onChange={(e) => setAiInput(e.target.value)}
-              onKeyDown={(e) => {
-                e.stopPropagation();
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  sendAiMessage(aiInput);
-                }
-              }}
-              placeholder="Jina zukutu..."
-              disabled={aiLoading}
-              autoComplete="off"
-            />
-            <button
-              className={styles.aiSendBtn}
-              type="button"
-              disabled={aiLoading || !aiInput.trim()}
-              onClick={() => sendAiMessage(aiInput)}
-            >
-              ➤
-            </button>
-          </div>
-
-          {/* Iku keyboard for bot */}
-          <div className={styles.aiIkuKeyboard}>
-            {["a","b","ch","d","e","g","i","j","ɉ","k","m","n","o","p","r","s","t","u","ʉ","w","y","z","'"].map((letter) => (
-              <button
-                key={letter}
-                type="button"
-                className={styles.aiIkuKey}
-                onClick={() => setAiInput((prev) => prev + letter)}
-                disabled={aiLoading}
-              >
-                {letter}
-              </button>
-            ))}
-            <button
-              type="button"
-              className={`${styles.aiIkuKey} ${styles.aiIkuKeyDel}`}
-              onClick={() => setAiInput((prev) => prev.slice(0, -1))}
-              disabled={aiLoading}
-            >
-              ⌫
-            </button>
-          </div>
-        </div>
+        </>
       ) : null}
     </main>
   );

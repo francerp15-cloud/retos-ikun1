@@ -19,6 +19,26 @@
   background: #1a3d28;
   color: var(--cream);
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.game *,
+.game *::before,
+.game *::after {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.game input,
+.game textarea {
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
 }
 
 .canvas {
@@ -359,6 +379,9 @@
   background: rgba(255, 255, 255, 0.14);
   backdrop-filter: blur(8px);
   touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .controlButton:active {
@@ -1252,6 +1275,13 @@
   white-space: nowrap;
 }
 
+.effectIconImg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  object-fit: contain;
+}
+
 .effect_speed {
   background: linear-gradient(135deg, #f9a825, #fff176);
   color: #4a3000;
@@ -1702,6 +1732,11 @@
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.aiMsgBubble strong {
+  color: #f6d488;
+  font-weight: 900;
 }
 .aiMsgBot .aiMsgBubble {
   background: rgba(255, 255, 255, 0.07);
@@ -3103,4 +3138,703 @@
   padding: 1px 6px;
   letter-spacing: 0.04em;
   border: 1px solid rgba(200,160,40,0.35);
+}
+
+.activeEffectBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.playerGreetingAvatar {
+  width: 30px;
+  height: 30px;
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(240, 184, 75, 0.45);
+  border-radius: 50%;
+  background: rgba(13, 51, 32, 0.78);
+}
+
+.playerGreetingAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  transform: scale(1.4) translateY(10%);
+}
+
+.splashStartBtnIcon,
+.charConfirmBtn svg,
+.charBackBtn svg,
+.orderUndo svg,
+.tfBtn svg,
+.aiFloatBtn svg,
+.aiSendBtn svg,
+.ikuKeyboardLabel svg,
+.matchChip svg,
+.matchProgress svg {
+  flex: 0 0 auto;
+}
+
+.charConfirmBtn,
+.charBackBtn,
+.orderUndo,
+.tfBtn,
+.ikuKeyboardLabel,
+.matchProgress {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.charConfirmBtn {
+  gap: 8px;
+}
+
+.charBackBtn {
+  gap: 6px;
+}
+
+.charBackBtn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.charSelectDiamond {
+  width: 0.62em;
+  height: 0.62em;
+  display: inline-block;
+  border: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.fieldCardAudioBtn {
+  color: #eaffdf;
+}
+
+.ikuKeyboardLabel {
+  gap: 6px;
+}
+
+.orderUndo {
+  gap: 6px;
+}
+
+.matchChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+}
+
+.matchChip span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.matchArrow {
+  display: grid;
+  place-items: center;
+}
+
+.matchProgress {
+  gap: 5px;
+}
+
+.tfBtn {
+  align-items: center;
+  gap: 8px;
+}
+
+.aiPanel,
+.aiMessages {
+  min-height: 0;
+}
+
+.aiAvatar,
+.aiMsgAvatar {
+  display: grid;
+  place-items: center;
+  color: #9bdc8e;
+}
+
+.aiIkuKeyboard {
+  max-height: 96px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.hudHeart {
+  display: grid;
+  place-items: center;
+  color: #ff6d6d;
+}
+
+.hudHeartEmpty {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+@media (max-width: 700px) {
+  .startScreen,
+  .overlay {
+    padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
+  }
+
+  .startPanel {
+    gap: 10px;
+    padding: 10px 0 18px;
+  }
+
+  .brandMark {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+  }
+
+  .title {
+    font-size: clamp(2rem, 12vw, 3.4rem);
+  }
+
+  .intro,
+  .ikuLine span,
+  .controlHint {
+    font-size: 0.82rem;
+  }
+
+  .previewGrid {
+    gap: 8px;
+  }
+
+  .previewItem {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+  }
+
+  .modal {
+    width: 100%;
+    max-height: calc(100svh - 20px);
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .lessonModal,
+  .quizModal {
+    width: 100%;
+    height: calc(100svh - 20px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .modalHeader {
+    gap: 4px;
+    flex: 0 0 auto;
+  }
+
+  .chestBadge {
+    width: 44px;
+    height: 44px;
+    margin-bottom: 0;
+  }
+
+  .modalTitle {
+    font-size: clamp(1.2rem, 6vw, 1.55rem);
+    line-height: 1.08;
+  }
+
+  .modalSubtitle {
+    font-size: 0.82rem;
+    line-height: 1.3;
+  }
+
+  .eyebrow {
+    padding: 4px 9px;
+    font-size: 0.66rem;
+  }
+
+  .quizBox {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    gap: 8px;
+    margin-top: 8px;
+    padding: 10px;
+    border-radius: 12px;
+  }
+
+  .quizTopline {
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 0.66rem;
+    line-height: 1.2;
+  }
+
+  .quizTypeChip {
+    padding: 3px 7px;
+  }
+
+  .quizProgressBar {
+    height: 4px;
+  }
+
+  .quizSubjectFull {
+    margin-bottom: 0;
+  }
+
+  .quizSubject,
+  .quizSubjectImgOnly {
+    border-radius: 10px;
+  }
+
+  .quizSubject {
+    gap: 10px;
+    padding: 8px;
+  }
+
+  .quizSubjectImgOnly {
+    aspect-ratio: 16 / 5;
+    max-height: 78px;
+  }
+
+  .quizPrompt {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.32;
+  }
+
+  .answers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .answerButton {
+    min-height: 42px;
+    padding: 9px 10px;
+    font-size: 0.84rem;
+    line-height: 1.2;
+  }
+
+  .writeRow {
+    gap: 8px;
+  }
+
+  .writeInput,
+  .checkButton {
+    min-height: 42px;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+  }
+
+  .ikuKeyboard {
+    max-height: 128px;
+    overflow-y: auto;
+    padding: 8px;
+  }
+
+  .ikuKeyboardKeys {
+    gap: 5px;
+  }
+
+  .ikuKey {
+    min-width: 31px;
+    height: 31px;
+    border-radius: 7px;
+    font-size: 0.78rem;
+  }
+
+  .wordSearchWrap {
+    gap: 7px;
+  }
+
+  .wordSearchGrid {
+    gap: 3px;
+    padding: 7px;
+    max-width: 100%;
+    overflow: auto;
+  }
+
+  .wsCell {
+    width: 29px;
+    height: 29px;
+    border-radius: 5px;
+    font-size: 0.78rem;
+  }
+
+  .wsHint {
+    margin: 0;
+  }
+
+  .orderWrap {
+    gap: 10px;
+  }
+
+  .orderSlot {
+    min-width: 29px;
+    height: 34px;
+    border-radius: 7px;
+    font-size: 0.95rem;
+  }
+
+  .orderLetters {
+    gap: 6px;
+  }
+
+  .orderLetter {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    font-size: 0.92rem;
+  }
+
+  .matchColumns {
+    gap: 6px;
+  }
+
+  .matchCol {
+    max-width: none;
+    gap: 6px;
+  }
+
+  .matchChip {
+    min-height: 36px;
+    padding: 7px 8px;
+    border-width: 1.5px;
+    border-radius: 9px;
+    font-size: 0.74rem;
+  }
+
+  .matchArrow {
+    width: 22px;
+  }
+
+  .imagePickGrid {
+    gap: 8px;
+  }
+
+  .imagePickCard {
+    gap: 5px;
+    padding: 5px;
+    border-radius: 10px;
+  }
+
+  .imagePickCard span {
+    font-size: 0.72rem;
+    line-height: 1.15;
+  }
+
+  .trueFalseWrap {
+    gap: 10px;
+  }
+
+  .tfStatement {
+    padding: 10px 12px;
+    font-size: 0.86rem;
+    line-height: 1.35;
+  }
+
+  .tfButtons {
+    gap: 8px;
+  }
+
+  .tfBtn {
+    min-height: 44px;
+    padding: 10px;
+    font-size: 0.92rem;
+  }
+
+  .attemptsRow {
+    margin: 2px 0 0;
+  }
+
+  .feedback {
+    min-height: 0;
+    padding: 7px 10px;
+    font-size: 0.82rem;
+  }
+
+  .lessonHeader {
+    flex: 0 0 auto;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+
+  .lessonTitle {
+    font-size: clamp(1.24rem, 6.6vw, 1.68rem);
+  }
+
+  .lessonHint {
+    font-size: 0.78rem;
+    line-height: 1.26;
+  }
+
+  .lessonModal .fieldCard {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    border-radius: 14px;
+  }
+
+  .fieldCardImageWrap {
+    aspect-ratio: 16 / 6.2;
+    max-height: 148px;
+  }
+
+  .fieldCardInfo {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    gap: 7px;
+    padding: 10px 12px;
+  }
+
+  .fieldCardIkuName {
+    font-size: 1rem;
+  }
+
+  .fieldCardIkuChip {
+    font-size: 0.56rem;
+    padding: 3px 7px;
+  }
+
+  .fieldCardAudioBtn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .fieldCardEsName {
+    padding-bottom: 6px;
+    font-size: 0.92rem;
+  }
+
+  .fieldCardKey {
+    min-width: 88px;
+    font-size: 0.58rem;
+  }
+
+  .fieldCardVal {
+    font-size: 0.68rem;
+  }
+
+  .fieldCardDesc {
+    font-size: 0.7rem;
+    line-height: 1.34;
+  }
+
+  .progressDots {
+    flex: 0 0 auto;
+    margin: 6px 0;
+  }
+
+  .lessonFooter {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    flex: 0 0 auto;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid rgba(240, 184, 75, 0.34);
+    border-radius: 16px;
+    background:
+      linear-gradient(180deg, rgba(8, 28, 18, 0.96), rgba(3, 15, 10, 0.98));
+    box-shadow: 0 -12px 30px rgba(0, 0, 0, 0.24);
+  }
+
+  .navButton,
+  .lessonFooter > .primaryButton {
+    min-height: 46px;
+    width: 100%;
+    padding: 10px 10px;
+    border-radius: 12px;
+    font-size: 0.82rem;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+
+  .lessonFooter > .primaryButton {
+    grid-column: auto;
+    justify-self: stretch;
+  }
+
+  .counter {
+    grid-column: auto;
+    order: 0;
+    min-width: 46px;
+    align-self: center;
+    font-size: 1rem;
+  }
+
+  .collectedBar {
+    top: 78px;
+    width: min(94vw, 360px);
+    padding: 6px 8px;
+  }
+
+  .slot {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+
+  .hudNew {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    gap: 6px;
+  }
+
+  .hudAvatarCircle {
+    width: 44px;
+    height: 44px;
+  }
+
+  .hudHearts,
+  .hudLeafBadge,
+  .hudCoinBadge {
+    padding: 5px 8px;
+  }
+
+  .hudCoinBadge,
+  .hudLeafBadge {
+    font-size: 0.84rem;
+  }
+
+  .hudPauseBtn {
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+  }
+
+  .activeEffectBadge {
+    top: 106px;
+    padding: 7px 13px;
+    font-size: 0.82rem;
+  }
+
+  .aiFloatBtn {
+    right: 12px;
+    bottom: calc(86px + env(safe-area-inset-bottom));
+    width: 50px;
+    height: 50px;
+  }
+
+  .aiPanel {
+    left: 8px;
+    right: 8px;
+    bottom: calc(146px + env(safe-area-inset-bottom));
+    width: auto;
+    max-height: calc(100svh - 164px - env(safe-area-inset-bottom));
+    border-radius: 14px;
+  }
+
+  .aiHeader {
+    padding: 10px 12px 9px;
+  }
+
+  .aiMessages {
+    padding: 10px 8px;
+    gap: 8px;
+  }
+
+  .aiMsgBubble {
+    max-width: 86%;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    line-height: 1.42;
+  }
+
+  .aiQuickRow {
+    max-height: 84px;
+    overflow-y: auto;
+    padding: 6px 8px;
+  }
+
+  .aiInputRow {
+    padding: 8px;
+  }
+
+  .aiIkuKeyboard {
+    max-height: 74px;
+    padding: 7px 8px;
+  }
+
+  .aiIkuKey {
+    min-width: 26px;
+    height: 26px;
+    font-size: 0.7rem;
+  }
+
+  .charSelectScreen {
+    align-items: flex-start;
+    padding: max(14px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom));
+  }
+
+  .charSelectWrapper {
+    gap: 14px;
+    max-width: 420px;
+  }
+
+  .charSelectHeading {
+    gap: 9px;
+    text-align: center;
+  }
+
+  .charSelectCards {
+    gap: 12px;
+  }
+
+  .charPickFrame {
+    aspect-ratio: 4 / 4.8;
+  }
+
+  .charPickLabel {
+    padding: 7px 16px;
+    font-size: 0.75rem;
+  }
+
+  .charConfirmBtn {
+    min-height: 46px;
+    padding: 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  .answers {
+    grid-template-columns: 1fr;
+  }
+
+  .matchColumns {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .matchArrow {
+    align-self: center;
+    transform: rotate(90deg);
+  }
+}
+
+@media (max-height: 640px) and (max-width: 700px) {
+  .chestBadge {
+    display: none;
+  }
+
+  .quizSubjectImgOnly,
+  .quizSubjectFull {
+    display: none;
+  }
+
+  .modal {
+    max-height: calc(100svh - 12px);
+    padding: 10px;
+  }
+
+  .quizBox {
+    margin-top: 6px;
+  }
+
+  .aiPanel {
+    bottom: calc(82px + env(safe-area-inset-bottom));
+    max-height: calc(100svh - 96px - env(safe-area-inset-bottom));
+  }
 }

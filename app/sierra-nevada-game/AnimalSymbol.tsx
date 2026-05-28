@@ -9,6 +9,10 @@ type Props = {
 };
 
 type Palette = { base: string; accent: string; dark: string; light: string };
+type IconProps = {
+  size?: number;
+  className?: string;
+};
 
 const COLORS: Record<AnimalType, Palette> = {
   reptil: { base: "#7ac96f", accent: "#d9c967", dark: "#17452d", light: "#e6f4cc" },
@@ -333,6 +337,124 @@ export function ChestIcon({ size = 28 }: { size?: number }) {
       <path d="M29 27H35V43H29V27Z" fill="#f3c55b" />
       <rect x="26" y="37" width="12" height="10" rx="2" fill="#2a1b11" />
       <path d="M18 27V19C18 13.5 22.5 9 28 9H36C41.5 9 46 13.5 46 19V27" stroke="#4e2b16" strokeWidth="4" />
+    </svg>
+  );
+}
+
+export function SpeakerIcon({ size = 20, className }: IconProps) {
+  return (
+    <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M4 9.5V14.5H8L13 19V5L8 9.5H4Z" fill="currentColor" opacity="0.18" />
+      <path d="M4 9.5V14.5H8L13 19V5L8 9.5H4Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M16 9C16.8 9.8 17.2 10.8 17.2 12C17.2 13.2 16.8 14.2 16 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M18.5 6.5C20 8 20.8 9.8 20.8 12C20.8 14.2 20 16 18.5 17.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function HeartIcon({ size = 20, className, filled = true }: IconProps & { filled?: boolean }) {
+  return (
+    <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"}>
+      <path d="M12 20.5C8.1 17.3 4 14.2 4 9.7C4 7.2 5.9 5.2 8.3 5.2C9.8 5.2 11 6 12 7.2C13 6 14.2 5.2 15.7 5.2C18.1 5.2 20 7.2 20 9.7C20 14.2 15.9 17.3 12 20.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function CoinIcon({ size = 20, className }: IconProps) {
+  return (
+    <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="8" fill="#f0b84b" />
+      <circle cx="12" cy="12" r="5" fill="#f6d488" opacity="0.75" />
+      <path d="M12 7.8V16.2M9.4 10.1H13.2C14.1 10.1 14.8 10.7 14.8 11.5C14.8 12.3 14.1 12.9 13.2 12.9H10.9" stroke="#7a4318" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function PauseIcon({ size = 20, className }: IconProps) {
+  return (
+    <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M8 6V18M16 6V18" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function PlayIcon({ size = 20, className }: IconProps) {
+  return (
+    <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M8 5.5V18.5L18 12L8 5.5Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function CheckIcon({ size = 20, className }: IconProps) {
+  return (
+    <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M5 12.5L9.5 17L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function CloseIcon({ size = 20, className }: IconProps) {
+  return (
+    <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M6.5 6.5L17.5 17.5M17.5 6.5L6.5 17.5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function SendIcon({ size = 20, className }: IconProps) {
+  return (
+    <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M4 11.5L20 4L16 20L12.2 13.8L4 11.5Z" fill="currentColor" opacity="0.18" />
+      <path d="M4 11.5L20 4L16 20L12.2 13.8L4 11.5Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M12.2 13.8L20 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function BotIcon({ size = 20, className }: IconProps) {
+  return (
+    <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="5" y="8" width="14" height="11" rx="4" fill="currentColor" opacity="0.18" />
+      <rect x="5" y="8" width="14" height="11" rx="4" stroke="currentColor" strokeWidth="2" />
+      <path d="M12 8V5M9.5 5H14.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="9.5" cy="13.2" r="1.2" fill="currentColor" />
+      <circle cx="14.5" cy="13.2" r="1.2" fill="currentColor" />
+      <path d="M9.5 16H14.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ZapIcon({ size = 20, className }: IconProps) {
+  return (
+    <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M13 2.8L5.5 13H11L9.8 21.2L18.8 9.8H13.1L13 2.8Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function MagnetIcon({ size = 20, className }: IconProps) {
+  return (
+    <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M7 5V12.2C7 15 9.2 17.2 12 17.2C14.8 17.2 17 15 17 12.2V5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      <path d="M5.5 5H8.5M15.5 5H18.5" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function StarIcon({ size = 20, className }: IconProps) {
+  return (
+    <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M12 3.2L14.6 8.5L20.4 9.3L16.2 13.4L17.2 19.2L12 16.5L6.8 19.2L7.8 13.4L3.6 9.3L9.4 8.5L12 3.2Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function BackspaceIcon({ size = 20, className }: IconProps) {
+  return (
+    <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M9 6H19C20.1 6 21 6.9 21 8V16C21 17.1 20.1 18 19 18H9L3 12L9 6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path d="M12 10L16 14M16 10L12 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
