@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌿 Guardianes de la Sierra Nevada</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap');
+
+  :root {
+    --verde-sierra: #2d7a4f;
+    --verde-claro: #5cb85c;
+    --dorado: #f5a623;
+    --naranja: #e67e22;
+    --cielo: #87CEEB;
+    --tierra: #8B6914;
+    --hoja: #3a9e65;
+    --noche: #1a3a2a;
+    --blanco: #f0f8e8;
+    --rojo: #e74c3c;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--noche);
+    overflow: hidden;
+    user-select: none;
+  }
+
+  #gameContainer {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ===================== PANTALLA INICIO ===================== */
+  #startScreen {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, #0d2b1a 0%, #1a5c35 60%, #2d7a4f 100%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 100;
+  }
+
+  #startScreen h1 {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2rem, 5vw, 4rem);
+    color: var(--dorado);
+    text-shadow: 0 0 30px rgba(245,166,35,0.5), 3px 3px 0 #000;
+    text-align: center;
+    animation: titlePulse 2s ease-in-out infinite;
+  }
+
+  @keyframes titlePulse {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.03); }
+  }
+
+  #startScreen p {
+    color: #c8e6c9;
+    font-size: clamp(0.9rem, 2vw, 1.2rem);
+    margin: 10px 20px;
+    text-align: center;
+    max-width: 600px;
+    line-height: 1.6;
+  }
+
+  .animals-preview {
+    display: flex; gap: 20px; margin: 20px 0; flex-wrap: wrap; justify-content: center;
+  }
+  .animal-icon-big {
+    font-size: 2.5rem;
+    animation: float 2s ease-in-out infinite;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+  }
+  .animal-icon-big:nth-child(2) { animation-delay: 0.3s; }
+  .animal-icon-big:nth-child(3) { animation-delay: 0.6s; }
+  .animal-icon-big:nth-child(4) { animation-delay: 0.9s; }
+  .animal-icon-big:nth-child(5) { animation-delay: 1.2s; }
+
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .btnStart {
+    background: linear-gradient(135deg, var(--dorado), var(--naranja));
+    border: none; border-radius: 50px;
+    padding: 15px 50px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.5rem;
+    color: white;
+    cursor: pointer;
+    margin-top: 20px;
+    box-shadow: 0 8px 25px rgba(245,166,35,0.4), 0 4px 0 #b7791f;
+    transition: all 0.15s;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+  }
+  .btnStart:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(245,166,35,0.5), 0 6px 0 #b7791f; }
+  .btnStart:active { transform: translateY(2px); box-shadow: 0 4px 15px rgba(245,166,35,0.3), 0 2px 0 #b7791f; }
+
+  .controls-hint {
+    color: #81c784;
+    font-size: 0.85rem;
+    margin-top: 15px;
+    text-align: center;
+  }
+
+  /* ===================== CANVAS JUEGO ===================== */
+  #gameCanvas {
+    display: block;
+    position: absolute; top: 0; left: 0;
+  }
+
+  /* ===================== HUD ===================== */
+  #hud {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 20px;
+    background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  #hudLeft { display: flex; align-items: center; gap: 15px; }
+
+  .hud-item {
+    background: rgba(0,0,0,0.6);
+    border: 2px solid var(--dorado);
+    border-radius: 20px;
+    padding: 5px 14px;
+    color: white;
+    font-weight: 700;
+    font-size: 0.9rem;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  #animalCounter {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.1rem;
+    color: var(--dorado);
+  }
+
+  #levelBadge {
+    background: linear-gradient(135deg, var(--verde-sierra), var(--hoja));
+    border: 2px solid var(--dorado);
+    border-radius: 20px;
+    padding: 5px 14px;
+    color: white;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  /* ===================== MINI-BARRA ANIMALES ===================== */
+  #collectedBar {
+    position: absolute; bottom: 10px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 8px;
+    z-index: 10;
+    background: rgba(0,0,0,0.6);
+    border: 2px solid var(--dorado);
+    border-radius: 30px;
+    padding: 6px 14px;
+  }
+
+  .collected-slot {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    border: 2px dashed rgba(255,255,255,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem;
+    transition: all 0.3s;
+  }
+  .collected-slot.filled {
+    background: rgba(245,166,35,0.2);
+    border: 2px solid var(--dorado);
+    animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  @keyframes popIn {
+    0% { transform: scale(0); }
+    100% { transform: scale(1); }
+  }
+
+  /* ===================== MODAL COFRE / INFO ===================== */
+  #modal {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.75);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 50;
+    backdrop-filter: blur(3px);
+  }
+  #modal.show { display: flex; }
+
+  .modal-box {
+    background: linear-gradient(135deg, #0d3320 0%, #1a5c35 100%);
+    border: 3px solid var(--dorado);
+    border-radius: 20px;
+    padding: 25px;
+    max-width: 700px; width: 92%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 0 60px rgba(245,166,35,0.3);
+    animation: modalIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  @keyframes modalIn {
+    0% { transform: scale(0.5) rotate(-5deg); opacity: 0; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+
+  .modal-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.8rem;
+    color: var(--dorado);
+    text-align: center;
+    margin-bottom: 5px;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+  }
+
+  .modal-subtitle {
+    text-align: center;
+    color: #a8d5b5;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+  }
+
+  .animal-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .animal-card {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(245,166,35,0.3);
+    border-radius: 14px;
+    padding: 14px;
+    text-align: center;
+    transition: transform 0.2s;
+  }
+  .animal-card:hover { transform: translateY(-3px); }
+  .animal-card .emoji { font-size: 2.5rem; margin-bottom: 6px; }
+  .animal-card .name-es { font-weight: 800; color: #e8f5e9; font-size: 0.95rem; }
+  .animal-card .name-arh { color: var(--dorado); font-size: 0.8rem; font-style: italic; }
+  .animal-card .desc { color: #a8d5b5; font-size: 0.78rem; margin-top: 5px; line-height: 1.4; }
+
+  /* ===================== QUIZ ===================== */
+  .quiz-section {
+    background: rgba(0,0,0,0.3);
+    border: 2px solid rgba(245,166,35,0.4);
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 15px;
+  }
+
+  .quiz-section h3 {
+    font-family: 'Fredoka One', cursive;
+    color: var(--dorado);
+    margin-bottom: 12px;
+    font-size: 1.2rem;
+  }
+
+  .quiz-question {
+    color: #e8f5e9;
+    font-size: 1rem;
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  .quiz-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .quiz-btn {
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 10px;
+    padding: 10px;
+    color: white;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    transition: all 0.2s;
+  }
+  .quiz-btn:hover { background: rgba(245,166,35,0.2); border-color: var(--dorado); }
+  .quiz-btn.correct { background: rgba(92,184,92,0.4); border-color: #5cb85c; }
+  .quiz-btn.wrong { background: rgba(231,76,60,0.4); border-color: #e74c3c; }
+
+  .write-input {
+    width: 100%;
+    background: rgba(255,255,255,0.1);
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: white;
+    font-family: 'Nunito', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+  .write-input:focus { border-color: var(--dorado); }
+  .write-input::placeholder { color: rgba(255,255,255,0.4); font-weight: 400; }
+
+  .check-btn {
+    background: linear-gradient(135deg, var(--verde-claro), var(--verde-sierra));
+    border: none; border-radius: 10px;
+    padding: 10px 25px;
+    color: white;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: all 0.15s;
+    box-shadow: 0 4px 0 #1a5c35;
+  }
+  .check-btn:hover { transform: translateY(-2px); }
+  .check-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #1a5c35; }
+
+  .feedback-msg {
+    margin-top: 8px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    min-height: 24px;
+    text-align: center;
+  }
+  .feedback-msg.ok { color: #5cb85c; }
+  .feedback-msg.fail { color: #e74c3c; }
+
+  .continue-btn {
+    background: linear-gradient(135deg, var(--dorado), var(--naranja));
+    border: none; border-radius: 50px;
+    padding: 12px 40px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.2rem;
+    color: white;
+    cursor: pointer;
+    display: block; margin: 10px auto 0;
+    box-shadow: 0 6px 0 #b7791f;
+    transition: all 0.15s;
+  }
+  .continue-btn:hover { transform: translateY(-2px); }
+  .continue-btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #b7791f; }
+
+  /* ===================== SCORE POPUP ===================== */
+  .score-popup {
+    position: absolute;
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.5rem;
+    color: var(--dorado);
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.8);
+    pointer-events: none;
+    animation: scoreFloat 1.5s ease-out forwards;
+    z-index: 20;
+  }
+  @keyframes scoreFloat {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-80px) scale(1.3); }
+  }
+
+  /* ===================== GAME OVER / WIN ===================== */
+  #gameOverScreen {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: none; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 60;
+  }
+  #gameOverScreen.show { display: flex; }
+  #gameOverScreen h2 {
+    font-family: 'Fredoka One', cursive;
+    font-size: 3rem;
+    color: var(--dorado);
+    text-shadow: 3px 3px 0 rgba(0,0,0,0.5);
+    margin-bottom: 10px;
+  }
+  #gameOverScreen p {
+    color: #c8e6c9; font-size: 1.1rem; margin-bottom: 20px;
+  }
+
+  /* ===================== CONTROLES MÓVIL ===================== */
+  #mobileControls {
+    position: absolute; bottom: 60px; left: 0; right: 0;
+    display: flex; justify-content: space-between;
+    padding: 0 20px;
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  .ctrl-group { display: flex; gap: 8px; pointer-events: all; }
+
+  .ctrl-btn {
+    width: 55px; height: 55px;
+    background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: background 0.1s;
+    touch-action: none;
+  }
+  .ctrl-btn:active { background: rgba(245,166,35,0.4); border-color: var(--dorado); }
+
+  /* scrollbar modal */
+  .modal-box::-webkit-scrollbar { width: 6px; }
+  .modal-box::-webkit-scrollbar-track { background: transparent; }
+  .modal-box::-webkit-scrollbar-thumb { background: var(--dorado); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ===================== PANTALLA INICIO ===================== -->
+<div id="startScreen">
+  <div style="font-size:3rem; margin-bottom:5px;">🌿</div>
+  <h1>Guardianes de la<br>Sierra Nevada</h1>
+  <p style="margin-top:10px; color:#f0c96a; font-size:1rem;">
+    Ana'nuga jina niwi ka'gumuse' kwuya<br>
+    <span style="color:#a8d5b5; font-size:0.85rem;">Los animales de nuestra Sierra — en lengua Iku</span>
+  </p>
+  <p>¡Explora la Sierra Nevada y recoge animales! Cuando juntes 5, aparecerá un cofre mágico con información y actividades.</p>
+
+  <div class="animals-preview">
+    <span class="animal-icon-big">🦎</span>
+    <span class="animal-icon-big">🦅</span>
+    <span class="animal-icon-big">🐸</span>
+    <span class="animal-icon-big">🐍</span>
+    <span class="animal-icon-big">🐠</span>
+    <span class="animal-icon-big">🦋</span>
+    <span class="animal-icon-big">🐢</span>
+    <span class="animal-icon-big">🐒</span>
+  </div>
+
+  <button class="btnStart" onclick="startGame()">¡Empezar aventura! 🌿</button>
+  <p class="controls-hint">⬅️ ➡️ Moverse &nbsp;|&nbsp; ⬆️ / Espacio Saltar &nbsp;|&nbsp; Toca los animales para recogerlos</p>
+</div>
+
+<!-- ===================== CANVAS ===================== -->
+<div id="gameContainer">
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div id="hudLeft">
+      <div class="hud-item">🌿 Nivel <span id="levelNum">1</span></div>
+      <div class="hud-item">🐾 <span id="animalCounter">0</span> / 5 animales</div>
+    </div>
+    <div class="hud-item">⭐ <span id="scoreDisplay">0</span> pts</div>
+  </div>
+
+  <!-- Barra de animales recolectados -->
+  <div id="collectedBar">
+    <div class="collected-slot" id="slot0"></div>
+    <div class="collected-slot" id="slot1"></div>
+    <div class="collected-slot" id="slot2"></div>
+    <div class="collected-slot" id="slot3"></div>
+    <div class="collected-slot" id="slot4"></div>
+    <span style="color:#ccc; font-size:0.7rem; margin-left:6px; align-self:center;">¡5 para el cofre!</span>
+  </div>
+
+  <!-- Controles móvil -->
+  <div id="mobileControls">
+    <div class="ctrl-group">
+      <div class="ctrl-btn" id="btnLeft">⬅️</div>
+      <div class="ctrl-btn" id="btnRight">➡️</div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-btn" id="btnJump">⬆️</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL COFRE ===================== -->
+<div id="modal">
+  <div class="modal-box" id="modalBox">
+    <!-- contenido dinámico -->
+  </div>
+</div>
+
+<!-- ===================== GAME OVER ===================== -->
+<div id="gameOverScreen">
+  <div style="font-size:4rem">🏆</div>
+  <h2>¡Nivel Completado!</h2>
+  <p id="levelCompleteMsg">Respondiste correctamente y aprendiste sobre los animales de la Sierra.</p>
+  <button class="continue-btn" onclick="nextLevel()">Siguiente Nivel ➡️</button>
+</div>
+
+<script>
+// ===================== DATOS ANIMALES =====================
+const ANIMALS_DB = [
+  { id:'iguana', emoji:'🦎', nameEs:'Iguana', nameArh:'Iwanu', type:'reptil', 
+    desc:'Las iguanas se desplazan arrastrándose y ponen huevos. Son importantes para el control de insectos y la dispersión de semillas en la Sierra.' },
+  { id:'lobito', emoji:'🦎', nameEs:'Lobito (Lagartija)', nameArh:'Murrunza', type:'reptil',
+    desc:'Este pequeño reptil recorre los árboles y arbustos. Come insectos y ayuda a controlar sus poblaciones naturalmente.' },
+  { id:'anolis', emoji:'🦎', nameEs:'Anolis', nameArh:'Usameiro', type:'reptil',
+    desc:'El anolis es un lagarto ágil que cambia de color para comunicarse. Vive entre las hojas y ramas de la vegetación.' },
+  { id:'cascabel', emoji:'🐍', nameEs:'Cascabel', nameArh:'Aku', type:'reptil',
+    desc:'La serpiente cascabel es venenosa y usa su cola para advertir peligros. Es fundamental en el ecosistema como controlador de roedores.' },
+  { id:'coral', emoji:'🐍', nameEs:'Coral', nameArh:"Geyro'ta", type:'reptil',
+    desc:'La serpiente coral tiene bandas de colores brillantes. Aunque venenosa, es tímida y rara vez ataca si no se le molesta.' },
+  { id:'mapana', emoji:'🐍', nameEs:'Mapaná', nameArh:'Makuku', type:'reptil',
+    desc:'La mapaná es una serpiente muy presente en la Sierra Nevada. Cumple un papel ecológico importante como depredadora de pequeños animales.' },
+  { id:'tortuga', emoji:'🐢', nameEs:'Tortuga', nameArh:'Marukonu', type:'reptil',
+    desc:'Las tortugas de la Sierra son lentas pero longevas. Pueden vivir muchos años y son consideradas sabias en la cosmología Iku.' },
+  { id:'condor', emoji:'🦅', nameEs:'Cóndor', nameArh:'Gwitiri', type:'ave',
+    desc:'El cóndor es el rey de los cielos de la Sierra Nevada. Las aves transmiten mensajes y cuidan la montaña según los pueblos indígenas.' },
+  { id:'turpial', emoji:'🐦', nameEs:'Toche / Turpial', nameArh:"Chu'mmisi", type:'ave',
+    desc:'El turpial es un ave de hermoso canto y plumaje dorado. Su melodía es un tesoro natural de los bosques serranos.' },
+  { id:'tucan1', emoji:'🦜', nameEs:'Tucán pechiamarillo', nameArh:"Cha'go chummi", type:'ave',
+    desc:'El tucán pechiamarillo dispersa semillas al comer frutos. Su pico colorido es una de las maravillas de la biodiversidad de la Sierra.' },
+  { id:'tucan2', emoji:'🦜', nameEs:'Tucán pechiblanco', nameArh:"Cha'go tungu'nguru", type:'ave',
+    desc:'Pariente del tucán pechiamarillo, este ave juega un rol vital en la regeneración del bosque al transportar semillas entre árboles.' },
+  { id:'rana', emoji:'🐸', nameEs:'Rana', nameArh:'Gowna awiri', type:'anfibio',
+    desc:'Las ranas de la Sierra Nevada son bioindicadores: su presencia revela ecosistemas saludables. Absorben agua y oxígeno por su piel.' },
+  { id:'sapo', emoji:'🐸', nameEs:'Sapo', nameArh:'Sapu', type:'anfibio',
+    desc:'El sapo ayuda a controlar insectos. Sus cantos nocturnos son parte del coro natural de la Sierra y anuncian la lluvia.' },
+  { id:'pez', emoji:'🐠', nameEs:'Pez de río', nameArh:'Jwiwaka', type:'pez',
+    desc:'Los ríos de la Sierra Nevada son hogar de peces únicos. Forman parte de la dieta y cultura de los pueblos originarios.' },
+  { id:'mariposa', emoji:'🦋', nameEs:'Mariposa', nameArh:"Chun Jina", type:'insecto',
+    desc:'Las mariposas polinizan las flores de la Sierra. Su presencia colorida alegra los senderos y su ciclo de vida fascina a todos.' },
+  { id:'arana', emoji:'🕷️', nameEs:'Araña', nameArh:'Tawa', type:'insecto',
+    desc:'Las arañas tejen trampas para atrapar insectos. Son cazadoras expertas que mantienen el equilibrio de la cadena alimenticia.' },
+  { id:'mono', emoji:'🐒', nameEs:'Mono', nameArh:"Ana'nuga", type:'mamifero',
+    desc:'Los monos de la Sierra saltan entre árboles y comen frutas. Al moverse, esparcen semillas y contribuyen a regenerar el bosque.' },
+  { id:'jaguar', emoji:'🐆', nameEs:'Jaguar / Puma', nameArh:'Kunsamu', type:'mamifero',
+    desc:'El jaguar es el gran felino de la Sierra Nevada. Los pueblos indígenas lo consideran guardián espiritual de la montaña.' },
+];
+
+// ===================== PREGUNTAS QUIZ =====================
+function getQuizForAnimals(animals) {
+  const quizzes = [];
+  
+  // Quiz 1: opciones múltiples (nombre en arhuaco)
+  const a = animals[Math.floor(Math.random() * animals.length)];
+  const others = ANIMALS_DB.filter(x => x.id !== a.id).sort(() => Math.random()-0.5).slice(0,3);
+  const opts = [a.nameArh, ...others.map(o=>o.nameArh)].sort(()=>Math.random()-0.5);
+  quizzes.push({
+    type: 'multiple',
+    question: `¿Cómo se llama <strong>${a.emoji} ${a.nameEs}</strong> en lengua Iku?`,
+    options: opts,
+    answer: a.nameArh,
+    feedback: `✅ ¡Correcto! En Iku se dice "<strong>${a.nameArh}</strong>"`
+  });
+
+  // Quiz 2: escribir el nombre
+  const b = animals[Math.floor(Math.random() * animals.length)];
+  quizzes.push({
+    type: 'write',
+    question: `Escribe el nombre en ESPAÑOL de este animal: <span style="font-size:2rem">${b.emoji}</span><br><span style="color:var(--dorado)">Pista: empieza con "${b.nameEs[0]}"</span>`,
+    answer: b.nameEs.toLowerCase(),
+    animal: b,
+    feedback: `✅ ¡Muy bien! Es <strong>${b.nameEs}</strong> (${b.nameArh} en Iku)`
+  });
+
+  // Quiz 3: ¿cuál pertenece al tipo?
+  const typeAnimal = animals[0];
+  const typeGroup = ANIMALS_DB.filter(x=>x.type===typeAnimal.type).map(x=>x.nameEs);
+  const wrongGroup = ANIMALS_DB.filter(x=>x.type!==typeAnimal.type).slice(0,2).map(x=>x.nameEs);
+  const mixedOpts = [...typeGroup.slice(0,2), ...wrongGroup].sort(()=>Math.random()-0.5).slice(0,4);
+  if (!mixedOpts.includes(typeAnimal.nameEs)) mixedOpts[0] = typeAnimal.nameEs;
+  quizzes.push({
+    type: 'multiple',
+    question: `¿Cuál de estos animales es un <strong>${typeAnimal.type}</strong>, igual que ${typeAnimal.emoji} ${typeAnimal.nameEs}?`,
+    options: mixedOpts.sort(()=>Math.random()-0.5),
+    answer: typeAnimal.nameEs,
+    feedback: `✅ ¡Exacto! ${typeAnimal.nameEs} y los de su grupo son ${typeAnimal.type}s.`
+  });
+
+  return quizzes;
+}
+
+// ===================== ESTADO DEL JUEGO =====================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+let gameRunning = false;
+let score = 0;
+let level = 1;
+let collectedAnimals = [];
+let chestSpawned = false;
+let chestCollected = false;
+
+// Mundo
+let worldX = 0; // scroll horizontal
+const WORLD_WIDTH = 3500;
+const TILE = 48;
+const GRAVITY = 0.55;
+const JUMP_FORCE = -13;
+const SPEED = 4;
+
+// Jugador
+const player = {
+  x: 200, y: 300,
+  w: 36, h: 48,
+  vx: 0, vy: 0,
+  onGround: false,
+  facing: 1,
+  frame: 0, frameTimer: 0,
+  invincible: 0,
+  color: '#f5a623'
+};
+
+// Plataformas (relativas al mundo)
+let platforms = [];
+let animalSprites = [];
+let chest = null;
+let particles = [];
+let keys = {};
+
+function setupLevel(lvl) {
+  collectedAnimals = [];
+  chestSpawned = false;
+  chestCollected = false;
+  worldX = 0;
+  player.x = 100; player.y = 200;
+  player.vx = 0; player.vy = 0;
+  chest = null;
+  particles = [];
+  updateHUD();
+  updateCollectedBar();
+
+  // Suelo base
+  platforms = [];
+  for (let x = 0; x < WORLD_WIDTH; x += TILE) {
+    platforms.push({ x, y: H - TILE, w: TILE, h: TILE, color: '#5a3a1a' });
+  }
+
+  // Plataformas adicionales por nivel
+  const extra = [
+    // Nivel 1 — tutorial suave
+    [200,H-200,160],[400,H-280,120],[700,H-180,200],[1000,H-260,160],
+    [1300,H-200,140],[1600,H-300,160],[1900,H-220,200],[2200,H-280,120],
+    [2500,H-200,180],[2800,H-260,160],[3100,H-200,200],
+  ];
+
+  if (extra[0]) {
+    extra.forEach(([x,y,w]) => {
+      platforms.push({x, y, w, h: TILE, color: ['#3a7c44','#2d7a4f','#4a9e5c'][Math.floor(Math.random()*3)]});
+    });
+  }
+
+  // Animales distribuidos
+  const pool = [...ANIMALS_DB].sort(()=>Math.random()-0.5);
+  animalSprites = [];
+  const positions = [250,500,750,1050,1350,1650,1950,2250,2550,2850,3100];
+  positions.forEach((px, i) => {
+    const plat = platforms.find(p => p.x <= px && p.x+p.w >= px && p.y < H-TILE);
+    const py = plat ? plat.y - 40 : H - TILE*2 - 20;
+    animalSprites.push({
+      x: px, y: py,
+      animal: pool[i % pool.length],
+      collected: false,
+      bob: Math.random() * Math.PI * 2,
+      scale: 1
+    });
+  });
+}
+
+// ===================== RESIZE =====================
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', () => { resize(); if(gameRunning) setupLevel(level); });
+resize();
+
+// ===================== INPUT =====================
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if ((e.code === 'Space' || e.code === 'ArrowUp') && player.onGround) {
+    player.vy = JUMP_FORCE;
+    player.onGround = false;
+  }
+});
+document.addEventListener('keyup', e => keys[e.code] = false);
+
+// Mobile
+function mobilePress(btn, val) {
+  btn.addEventListener('pointerdown', () => keys[`m_${val}`] = true);
+  btn.addEventListener('pointerup', () => keys[`m_${val}`] = false);
+  btn.addEventListener('pointerleave', () => keys[`m_${val}`] = false);
+}
+mobilePress(document.getElementById('btnLeft'), 'left');
+mobilePress(document.getElementById('btnRight'), 'right');
+document.getElementById('btnJump').addEventListener('pointerdown', () => {
+  if (player.onGround) { player.vy = JUMP_FORCE; player.onGround = false; }
+});
+
+// ===================== FÍSICA =====================
+function updatePlayer() {
+  if (keys['ArrowLeft'] || keys['m_left']) { player.vx = -SPEED; player.facing = -1; }
+  else if (keys['ArrowRight'] || keys['m_right']) { player.vx = SPEED; player.facing = 1; }
+  else player.vx = 0;
+
+  player.vy += GRAVITY;
+  player.x += player.vx;
+  player.y += player.vy;
+
+  // Colisión con plataformas
+  player.onGround = false;
+  for (const p of platforms) {
+    const px = p.x - worldX;
+    if (player.x + player.w > px && player.x < px + p.w &&
+        player.y + player.h > p.y && player.y < p.y + p.h) {
+      if (player.vy >= 0 && player.y + player.h - player.vy <= p.y + 5) {
+        player.y = p.y - player.h;
+        player.vy = 0;
+        player.onGround = true;
+      } else if (player.vy < 0) {
+        player.y = p.y + p.h;
+        player.vy = 0;
+      }
+    }
+  }
+
+  // Límites mundo
+  if (player.x < 50) player.x = 50;
+  if (player.x > W - 50) {
+    // Scroll
+    worldX = Math.min(worldX + SPEED, WORLD_WIDTH - W);
+  }
+
+  // Caer al vacío
+  if (player.y > H + 100) {
+    player.y = 100; player.vy = 0;
+  }
+
+  // Scroll automático
+  const margin = W * 0.4;
+  if (player.x > margin) {
+    const shift = player.x - margin;
+    worldX = Math.min(worldX + shift, WORLD_WIDTH - W);
+    player.x = margin;
+  }
+  if (player.x < 120 && worldX > 0) {
+    const shift = 120 - player.x;
+    worldX = Math.max(worldX - shift, 0);
+    player.x = 120;
+  }
+
+  // Animación frame
+  player.frameTimer++;
+  if (player.frameTimer > 8) { player.frame = (player.frame+1) % 4; player.frameTimer = 0; }
+  if (player.invincible > 0) player.invincible--;
+}
+
+// ===================== RECOGER ANIMALES =====================
+function checkPickups() {
+  if (chestSpawned) {
+    // Verificar cofre
+    const cx = chest.x - worldX;
+    if (Math.abs(cx - player.x) < 60 && Math.abs(chest.y - player.y) < 60) {
+      openChest();
+      return;
+    }
+  }
+
+  for (const s of animalSprites) {
+    if (s.collected) continue;
+    const sx = s.x - worldX;
+    if (Math.abs(sx - player.x) < 45 && Math.abs(s.y - player.y) < 45) {
+      collectAnimal(s);
+    }
+  }
+}
+
+function collectAnimal(s) {
+  s.collected = true;
+  s.scale = 0;
+  collectedAnimals.push(s.animal);
+  score += 10;
+
+  // Partículas
+  for (let i = 0; i < 12; i++) {
+    particles.push({
+      x: s.x - worldX, y: s.y,
+      vx: (Math.random()-0.5)*5,
+      vy: (Math.random()-0.5)*5 - 2,
+      life: 1, color: ['#f5a623','#5cb85c','#fff'][Math.floor(Math.random()*3)],
+      size: 4 + Math.random()*4
+    });
+  }
+
+  // Score popup
+  const pop = document.createElement('div');
+  pop.className = 'score-popup';
+  pop.textContent = `+10 ${s.animal.emoji}`;
+  pop.style.left = (s.x - worldX - 20) + 'px';
+  pop.style.top = (s.y - 20) + 'px';
+  document.getElementById('gameContainer').appendChild(pop);
+  setTimeout(() => pop.remove(), 1500);
+
+  updateHUD();
+  updateCollectedBar();
+
+  if (collectedAnimals.length >= 5 && !chestSpawned) {
+    spawnChest();
+  }
+}
+
+function spawnChest() {
+  chestSpawned = true;
+  chest = {
+    x: player.x + worldX + 250,
+    y: H - TILE - 50,
+    bob: 0,
+    glow: 0
+  };
+}
+
+function openChest() {
+  gameRunning = false;
+  showModal();
+}
+
+// ===================== PARTÍCULAS =====================
+function updateParticles() {
+  particles = particles.filter(p => p.life > 0);
+  for (const p of particles) {
+    p.x += p.vx; p.y += p.vy;
+    p.vy += 0.1;
+    p.life -= 0.03;
+  }
+}
+
+// ===================== FONDO PARALLAX =====================
+const bgColors = [
+  ['#0d2b1a','#1a5c35'], // Noche selva
+  ['#0a1f3a','#1a3a5c'], // Noche montaña
+  ['#1a0d2b','#3a1a5c'], // Anochecer
+];
+
+function drawBackground(lvl) {
+  const [c1, c2] = bgColors[(lvl-1) % bgColors.length];
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0, c1);
+  grad.addColorStop(1, c2);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,W,H);
+
+  // Estrellas / luces
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  for (let i = 0; i < 40; i++) {
+    const sx = ((i * 173 + worldX * 0.05) % W);
+    const sy = ((i * 97) % (H * 0.4));
+    const sr = Math.abs(Math.sin(Date.now()/1000 + i)) * 2 + 0.5;
+    ctx.beginPath();
+    ctx.arc(sx, sy, sr, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Montañas lejanas (parallax 0.1)
+  ctx.fillStyle = 'rgba(20,60,35,0.6)';
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  const offset1 = worldX * 0.1;
+  for (let x = 0; x < W; x += 20) {
+    const my = H * 0.5 + Math.sin((x + offset1) * 0.008) * 80 + Math.sin((x + offset1) * 0.02) * 30;
+    ctx.lineTo(x, my);
+  }
+  ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+
+  // Montañas medias (parallax 0.3)
+  ctx.fillStyle = 'rgba(30,90,50,0.7)';
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  const offset2 = worldX * 0.3;
+  for (let x = 0; x < W; x += 15) {
+    const my = H * 0.65 + Math.sin((x + offset2) * 0.012) * 60 + Math.sin((x + offset2) * 0.03) * 20;
+    ctx.lineTo(x, my);
+  }
+  ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
+}
+
+// ===================== DIBUJAR =====================
+function draw() {
+  ctx.clearRect(0,0,W,H);
+  drawBackground(level);
+
+  // Plataformas
+  for (const p of platforms) {
+    const px = p.x - worldX;
+    if (px > W + 20 || px + p.w < -20) continue;
+
+    // Sombra
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.fillRect(px+4, p.y+4, p.w, p.h);
+
+    // Plataforma
+    ctx.fillStyle = p.color;
+    ctx.fillRect(px, p.y, p.w, p.h);
+
+    // Hierba encima
+    if (p.color !== '#5a3a1a') {
+      ctx.fillStyle = '#4caf50';
+      ctx.fillRect(px, p.y, p.w, 8);
+    } else {
+      ctx.fillStyle = '#8B6914';
+      ctx.fillRect(px, p.y, p.w, 8);
+    }
+
+    // Textura
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    for (let tx = px+6; tx < px+p.w-4; tx += 14) {
+      ctx.fillRect(tx, p.y + 12, 4, 8);
+    }
+  }
+
+  // Animales
+  const t = Date.now() / 600;
+  for (const s of animalSprites) {
+    if (s.collected) continue;
+    const sx = s.x - worldX;
+    if (sx < -40 || sx > W + 40) continue;
+
+    s.bob += 0.05;
+    const bobY = Math.sin(s.bob) * 5;
+
+    // Halo
+    try {
+      const glow = ctx.createRadialGradient(sx, s.y + bobY, 5, sx, s.y + bobY, 30);
+      glow.addColorStop(0, 'rgba(245,166,35,0.3)');
+      glow.addColorStop(1, 'rgba(245,166,35,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(sx, s.y + bobY, 30, 0, Math.PI*2); ctx.fill();
+    } catch(e) {}
+
+    ctx.font = '28px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(s.animal.emoji, sx, s.y + bobY);
+
+    // Nombre flotante
+    ctx.font = 'bold 10px Nunito, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillText(s.animal.nameEs, sx, s.y + bobY - 24);
+  }
+
+  // Cofre
+  if (chestSpawned && chest) {
+    const cx = chest.x - worldX;
+    chest.bob += 0.07;
+    chest.glow = (Math.sin(chest.bob) + 1) / 2;
+
+    // Glow dorado
+    try {
+      const cg = ctx.createRadialGradient(cx, chest.y, 10, cx, chest.y, 60);
+      cg.addColorStop(0, `rgba(245,166,35,${0.4 + chest.glow * 0.3})`);
+      cg.addColorStop(1, 'rgba(245,166,35,0)');
+      ctx.fillStyle = cg;
+      ctx.beginPath(); ctx.arc(cx, chest.y, 60, 0, Math.PI*2); ctx.fill();
+    } catch(e) {}
+
+    // Cofre emoji grande
+    ctx.font = '40px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('📦', cx, chest.y + Math.sin(chest.bob)*8);
+
+    ctx.font = 'bold 12px Nunito, sans-serif';
+    ctx.fillStyle = '#f5a623';
+    ctx.fillText('¡Tócame!', cx, chest.y - 35 + Math.sin(chest.bob)*5);
+  }
+
+  // Partículas
+  for (const p of particles) {
+    const r = Math.max(0.1, p.size * p.life);
+    ctx.globalAlpha = Math.max(0, p.life);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Jugador
+  drawPlayer();
+}
+
+function drawPlayer() {
+  const px = player.x;
+  const py = player.y;
+  const flip = player.facing === -1;
+
+  if (player.invincible > 0 && Math.floor(player.invincible / 4) % 2 === 0) return;
+
+  ctx.save();
+  if (flip) {
+    ctx.translate(px + player.w/2, py);
+    ctx.scale(-1, 1);
+    ctx.translate(-px - player.w/2, -py);
+  }
+
+  const cx = px + player.w / 2;
+  const legOffset = player.onGround ? Math.sin(player.frame * Math.PI / 2) * 5 : 0;
+
+  // ── CABELLO LARGO (detrás del cuerpo, ondulado) ──
+  ctx.fillStyle = '#1a1008';
+  // lado izquierdo - mechón largo ondulado
+  ctx.beginPath();
+  ctx.moveTo(cx - 6, py + 10);
+  ctx.bezierCurveTo(cx - 18, py + 16, cx - 20, py + 26, cx - 16, py + 38);
+  ctx.bezierCurveTo(cx - 14, py + 42, cx - 10, py + 40, cx - 9, py + 36);
+  ctx.bezierCurveTo(cx - 11, py + 26, cx - 9, py + 18, cx - 4, py + 13);
+  ctx.fill();
+  // lado derecho - mechón largo ondulado
+  ctx.beginPath();
+  ctx.moveTo(cx + 6, py + 10);
+  ctx.bezierCurveTo(cx + 18, py + 16, cx + 20, py + 26, cx + 16, py + 38);
+  ctx.bezierCurveTo(cx + 14, py + 42, cx + 10, py + 40, cx + 9, py + 36);
+  ctx.bezierCurveTo(cx + 11, py + 26, cx + 9, py + 18, cx + 4, py + 13);
+  ctx.fill();
+
+  // ── PIERNAS ──
+  ctx.fillStyle = '#eae6d4';
+  ctx.beginPath(); ctx.roundRect(cx - 11, py + 38, 10, 14 + legOffset, 3); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(cx + 1,  py + 38, 10, 14 - legOffset, 3); ctx.fill();
+
+  // ── PIES (simples, descalzos o alpargatas) ──
+  ctx.fillStyle = '#b89870';
+  ctx.beginPath(); ctx.ellipse(cx - 6, py + 53 + legOffset, 7, 3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx + 6, py + 53 - legOffset, 7, 3, 0, 0, Math.PI * 2); ctx.fill();
+
+  // ── TÚNICA BLANCA principal ──
+  // sombra lateral
+  ctx.fillStyle = '#d4d0be';
+  ctx.beginPath(); ctx.roundRect(px + 3, py + 17, 30, 23, [2,2,5,5]); ctx.fill();
+  // cuerpo blanco
+  ctx.fillStyle = '#f0ece0';
+  ctx.beginPath(); ctx.roundRect(px + 5, py + 15, 26, 24, [3,3,5,5]); ctx.fill();
+  // cuello en V con líneas oscuras (detalle característico)
+  ctx.strokeStyle = '#2a1e0e';
+  ctx.lineWidth = 1.2;
+  // línea izquierda del cuello V
+  ctx.beginPath(); ctx.moveTo(cx - 4, py + 15); ctx.lineTo(cx, py + 22); ctx.stroke();
+  // línea derecha del cuello V
+  ctx.beginPath(); ctx.moveTo(cx + 4, py + 15); ctx.lineTo(cx, py + 22); ctx.stroke();
+  // líneas decorativas horizontales de la túnica
+  ctx.lineWidth = 0.9;
+  ctx.beginPath(); ctx.moveTo(px + 5, py + 28); ctx.lineTo(px + 31, py + 28); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(px + 5, py + 34); ctx.lineTo(px + 31, py + 34); ctx.stroke();
+  // borde inferior con textura franja
+  ctx.strokeStyle = '#3a2a14';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(px + 5, py + 39); ctx.lineTo(px + 31, py + 39); ctx.stroke();
+
+  // ── MOCHILA ARHUACA grande con patrón geométrico ──
+  // correa diagonal
+  ctx.strokeStyle = '#c8b890';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(cx - 2, py + 16);
+  ctx.quadraticCurveTo(cx + 10, py + 22, cx + 13, py + 34);
+  ctx.stroke();
+  // cuerpo de la mochila
+  ctx.fillStyle = '#d4b87a';
+  ctx.beginPath();
+  ctx.roundRect(cx + 6, py + 26, 18, 20, 4);
+  ctx.fill();
+  // franja oscura inferior de la mochila
+  ctx.fillStyle = '#3a2510';
+  ctx.beginPath();
+  ctx.roundRect(cx + 6, py + 40, 18, 6, [0,0,4,4]);
+  ctx.fill();
+  // patrón geométrico: rombos (triángulos oscuros)
+  ctx.fillStyle = '#2a1808';
+  // triángulo superior izquierdo
+  ctx.beginPath(); ctx.moveTo(cx+8,py+28); ctx.lineTo(cx+13,py+28); ctx.lineTo(cx+8,py+34); ctx.closePath(); ctx.fill();
+  // triángulo superior derecho
+  ctx.beginPath(); ctx.moveTo(cx+22,py+28); ctx.lineTo(cx+17,py+28); ctx.lineTo(cx+22,py+34); ctx.closePath(); ctx.fill();
+  // rombo central
+  ctx.beginPath(); ctx.moveTo(cx+15,py+28); ctx.lineTo(cx+19,py+33); ctx.lineTo(cx+15,py+38); ctx.lineTo(cx+11,py+33); ctx.closePath(); ctx.fill();
+  // franja beige intermedia
+  ctx.fillStyle = '#e8d4a0';
+  ctx.beginPath(); ctx.roundRect(cx+6, py+36, 18, 4, 0); ctx.fill();
+
+  // ── PALO DEL POPORO en la mano ──
+  ctx.strokeStyle = '#6b3e1a';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx + 8, py + 20);
+  ctx.lineTo(cx + 18, py + 10);
+  ctx.stroke();
+  // bolita superior del poporo
+  ctx.fillStyle = '#8B5E2A';
+  ctx.beginPath(); ctx.arc(cx + 19, py + 9, 3, 0, Math.PI*2); ctx.fill();
+
+  // ── CABEZA (piel morena) ──
+  ctx.fillStyle = '#b87040';
+  ctx.beginPath(); ctx.arc(cx, py + 12, 12, 0, Math.PI*2); ctx.fill();
+
+  // ── CABELLO ENCIMA DE LA CABEZA (oscuro, bajo el sombrero) ──
+  ctx.fillStyle = '#1a1008';
+  ctx.beginPath(); ctx.arc(cx, py + 12, 11, Math.PI + 0.3, -0.3); ctx.fill();
+
+  // ── SOMBRERO ARHUACO (cilíndrico-redondeado, blanco/crema) ──
+  // cuerpo cilíndrico del sombrero
+  ctx.fillStyle = '#f0ece2';
+  ctx.beginPath();
+  ctx.roundRect(cx - 11, py - 10, 22, 14, [6, 6, 2, 2]);
+  ctx.fill();
+  // borde inferior del sombrero (aro)
+  ctx.fillStyle = '#ddd8c4';
+  ctx.beginPath();
+  ctx.ellipse(cx, py + 4, 12, 3.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // tope del sombrero (redondeado)
+  ctx.fillStyle = '#f5f2e8';
+  ctx.beginPath();
+  ctx.ellipse(cx, py - 10, 11, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // líneas de tejido del sombrero
+  ctx.strokeStyle = 'rgba(180,170,145,0.6)';
+  ctx.lineWidth = 0.8;
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(cx - 10, py - 7 + i * 4);
+    ctx.lineTo(cx + 10, py - 7 + i * 4);
+    ctx.stroke();
+  }
+
+  // ── OJOS ──
+  ctx.fillStyle = '#1a0a00';
+  ctx.beginPath(); ctx.arc(cx - 4, py + 12, 2.5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 4, py + 12, 2.5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.beginPath(); ctx.arc(cx - 3, py + 11, 0.9, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 5, py + 11, 0.9, 0, Math.PI*2); ctx.fill();
+
+  // ── CEJAS GRUESAS (característica de la imagen) ──
+  ctx.strokeStyle = '#1a0800';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(cx - 7, py + 8); ctx.lineTo(cx - 1, py + 8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx + 1, py + 8); ctx.lineTo(cx + 7, py + 8); ctx.stroke();
+
+  // ── NARIZ ──
+  ctx.fillStyle = '#9a5c2a';
+  ctx.beginPath(); ctx.arc(cx, py + 14, 1.5, 0, Math.PI*2); ctx.fill();
+
+  // ── SONRISA sutil ──
+  ctx.strokeStyle = '#7a3a1a';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(cx, py + 17, 3.5, 0.15, Math.PI - 0.15); ctx.stroke();
+
+  ctx.restore();
+}
+
+// ===================== LOOP =====================
+let lastTime = 0;
+function gameLoop(ts) {
+  if (!gameRunning) return;
+  const dt = ts - lastTime; lastTime = ts;
+
+  updatePlayer();
+  checkPickups();
+  updateParticles();
+  draw();
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ===================== HUD UPDATE =====================
+function updateHUD() {
+  document.getElementById('animalCounter').textContent = collectedAnimals.length;
+  document.getElementById('scoreDisplay').textContent = score;
+  document.getElementById('levelNum').textContent = level;
+}
+
+function updateCollectedBar() {
+  for (let i = 0; i < 5; i++) {
+    const slot = document.getElementById(`slot${i}`);
+    if (collectedAnimals[i]) {
+      slot.textContent = collectedAnimals[i].emoji;
+      slot.classList.add('filled');
+    } else {
+      slot.textContent = '';
+      slot.classList.remove('filled');
+    }
+  }
+}
+
+// ===================== MODAL =====================
+let quizzes = [];
+let quizIndex = 0;
+let quizScore = 0;
+
+function showModal() {
+  const modal = document.getElementById('modal');
+  const box = document.getElementById('modalBox');
+
+  quizzes = getQuizForAnimals(collectedAnimals);
+  quizIndex = 0;
+  quizScore = 0;
+
+  // Tarjetas de animales
+  const cards = collectedAnimals.slice(0,5).map(a => `
+    <div class="animal-card">
+      <div class="emoji">${a.emoji}</div>
+      <div class="name-es">${a.nameEs}</div>
+      <div class="name-arh">🌿 Iku: ${a.nameArh}</div>
+      <div class="desc">${a.desc}</div>
+    </div>
+  `).join('');
+
+  box.innerHTML = `
+    <div class="modal-title">🏆 ¡Cofre de Sabiduría!</div>
+    <div class="modal-subtitle">Encontraste ${collectedAnimals.length} animales de la Sierra Nevada ✨</div>
+    <div class="animal-cards">${cards}</div>
+    <div id="quizArea"></div>
+  `;
+
+  renderQuiz();
+  modal.classList.add('show');
+}
+
+function renderQuiz() {
+  const area = document.getElementById('quizArea');
+  if (quizIndex >= quizzes.length) {
+    area.innerHTML = `
+      <div class="quiz-section" style="text-align:center">
+        <div style="font-size:3rem">🌟</div>
+        <h3 style="font-size:1.5rem">¡Actividad completada!</h3>
+        <p style="color:#c8e6c9; margin:10px 0">Puntuación del quiz: <strong style="color:var(--dorado)">${quizScore}/${quizzes.length}</strong></p>
+        <p style="color:#a8d5b5; font-size:0.9rem">¡Los animales de la Sierra Nevada te agradecen haberlos conocido! 🌿</p>
+        <button class="continue-btn" onclick="closeModalAndContinue()">Seguir explorando ➡️</button>
+      </div>
+    `;
+    return;
+  }
+
+  const q = quizzes[quizIndex];
+  let html = `
+    <div class="quiz-section">
+      <h3>🎯 Actividad ${quizIndex+1} de ${quizzes.length}</h3>
+      <p class="quiz-question">${q.question}</p>
+  `;
+
+  if (q.type === 'multiple') {
+    html += `<div class="quiz-options">`;
+    q.options.forEach((opt, i) => {
+      html += `<button class="quiz-btn" onclick="checkMultiple(this,${quizIndex},${i})">${opt}</button>`;
+    });
+    html += `</div><div class="feedback-msg" id="feedbackMsg"></div>`;
+  } else if (q.type === 'write') {
+    html += `
+      <input class="write-input" id="writeInput" type="text" placeholder="Escribe aquí tu respuesta..." autocomplete="off">
+      <br>
+      <button class="check-btn" onclick="checkWrite()">✅ Verificar</button>
+      <div class="feedback-msg" id="feedbackMsg"></div>
+    `;
+  }
+
+  html += `</div>`;
+  area.innerHTML = html;
+}
+
+function checkMultiple(btn, qIdx, optIdx) {
+  const q = quizzes[qIdx];
+  const chosen = q.options[optIdx];
+  const buttons = document.querySelectorAll('.quiz-btn');
+  buttons.forEach(b => b.disabled = true);
+
+  const fb = document.getElementById('feedbackMsg');
+  if (chosen === q.answer) {
+    btn.classList.add('correct');
+    fb.className = 'feedback-msg ok';
+    fb.innerHTML = q.feedback;
+    quizScore++;
+    score += 20;
+    updateHUD();
+    setTimeout(() => { quizIndex++; renderQuiz(); }, 1800);
+  } else {
+    btn.classList.add('wrong');
+    fb.className = 'feedback-msg fail';
+    fb.innerHTML = `❌ No era esa. La respuesta correcta es: <strong>${q.answer}</strong>`;
+    setTimeout(() => { quizIndex++; renderQuiz(); }, 2200);
+  }
+}
+
+function checkWrite() {
+  const inp = document.getElementById('writeInput');
+  const val = inp.value.trim().toLowerCase();
+  const q = quizzes[quizIndex];
+  const fb = document.getElementById('feedbackMsg');
+  const btn = document.querySelector('.check-btn');
+  btn.disabled = true;
+
+  // Permitir variaciones (sin tildes, parcial)
+  const normalize = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const match = normalize(val) === normalize(q.answer) || 
+                normalize(q.answer).includes(normalize(val)) && val.length > 2;
+
+  if (match) {
+    inp.style.borderColor = '#5cb85c';
+    fb.className = 'feedback-msg ok';
+    fb.innerHTML = q.feedback;
+    quizScore++;
+    score += 20;
+    updateHUD();
+    setTimeout(() => { quizIndex++; renderQuiz(); }, 1800);
+  } else {
+    inp.style.borderColor = '#e74c3c';
+    fb.className = 'feedback-msg fail';
+    fb.innerHTML = `❌ Casi. La respuesta era: <strong>${q.answer}</strong>. ¡Sigue intentando!`;
+    inp.disabled = true;
+    setTimeout(() => { quizIndex++; renderQuiz(); }, 2200);
+  }
+}
+
+function closeModalAndContinue() {
+  document.getElementById('modal').classList.remove('show');
+  
+  // Limpiar animales recolectados y continuar
+  collectedAnimals = [];
+  chestSpawned = false;
+  chest = null;
+
+  // Recargar nuevos animales en el mundo
+  const pool = [...ANIMALS_DB].sort(()=>Math.random()-0.5);
+  const newPositions = animalSprites.filter(s=>s.collected).map(s=>s.x);
+  animalSprites.filter(s=>s.collected).forEach((s,i) => {
+    s.collected = false;
+    s.animal = pool[i % pool.length];
+    s.scale = 1;
+    s.bob = Math.random() * Math.PI * 2;
+  });
+
+  updateCollectedBar();
+  updateHUD();
+  gameRunning = true;
+  requestAnimationFrame(gameLoop);
+}
+
+function nextLevel() {
+  level++;
+  document.getElementById('gameOverScreen').classList.remove('show');
+  setupLevel(level);
+  gameRunning = true;
+  requestAnimationFrame(gameLoop);
+}
+
+// ===================== INICIO =====================
+function startGame() {
+  document.getElementById('startScreen').style.display = 'none';
+  resize();
+  setupLevel(level);
+  gameRunning = true;
+  lastTime = performance.now();
+  requestAnimationFrame(gameLoop);
+}
+</script>
+</body>
+</html>
