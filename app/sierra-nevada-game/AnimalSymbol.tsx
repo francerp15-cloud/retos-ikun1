@@ -261,7 +261,7 @@ export function AnimalSymbol({ animal, type, size = 42, label }: Props) {
   const content = animal ? renderAnimal(animal.id, colors) : null;
 
   // Si el animal tiene imagen Ghibli, mostrarla como icono recortado circular
-  if (animal?.image && size >= 40) {
+  if (animal?.image) {
     return (
       <div
         aria-label={label ?? animal.nameEs}

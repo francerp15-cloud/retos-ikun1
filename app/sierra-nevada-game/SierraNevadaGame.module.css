@@ -316,8 +316,8 @@
 }
 
 .slot {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   display: grid;
   place-items: center;
   flex: 0 0 auto;
@@ -2463,27 +2463,27 @@
 .fieldCardImageWrap {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 6 / 5;
   overflow: hidden;
   flex-shrink: 0;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(240, 184, 75, 0.16), transparent 58%),
+    linear-gradient(160deg, #10361f, #071b13);
 }
 
 .fieldCardImgCrop {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  /* Only clip the top portion where the text label lives */
-  clip-path: inset(17% 0 0 0);
 }
 
 .fieldCardImg {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  /* Push image up slightly so the cropped top brings the animal into view */
-  object-position: center 30%;
+  object-fit: contain;
+  object-position: center center;
   display: block;
-  transform: scale(1.22) translateY(5%);
+  transform: none;
   transform-origin: center center;
 }
 
@@ -3578,8 +3578,8 @@
   }
 
   .fieldCardImageWrap {
-    aspect-ratio: 16 / 6.2;
-    max-height: 148px;
+    aspect-ratio: 6 / 5;
+    max-height: min(34svh, 280px);
   }
 
   .fieldCardInfo {
@@ -3671,8 +3671,8 @@
   }
 
   .slot {
-    width: 32px;
-    height: 32px;
+    width: 38px;
+    height: 38px;
     border-radius: 8px;
   }
 

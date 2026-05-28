@@ -28,9 +28,9 @@ const WORLD_WIDTH = 3500;
 const TILE = 48;
 const GRAVITY = 0.55;
 const JUMP_FORCE = -11;
-const JUMP_HOLD_DELAY_FRAMES = 5;
+const JUMP_HOLD_DELAY_FRAMES = 9;
 const JUMP_HOLD_FRAMES = 18;
-const JUMP_HOLD_LIFT = 0.42;
+const JUMP_HOLD_LIFT = 0.55;
 const SPEED = 4;
 
 const PLAYER_SPRITE_SRC = [
@@ -2066,7 +2066,7 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
           const animal = collected[index];
           return (
             <div key={index} className={`${styles.slot} ${animal ? styles.slotFilled : ""}`}>
-              {animal ? <AnimalSymbol animal={animal} size={30} /> : null}
+              {animal ? <AnimalSymbol animal={animal} size={34} /> : null}
             </div>
           );
         })}
