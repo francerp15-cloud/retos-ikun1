@@ -27,10 +27,10 @@ const SESSION_KEY = "guardianes-sierra-nevada-session";
 const WORLD_WIDTH = 3500;
 const TILE = 48;
 const GRAVITY = 0.55;
-const JUMP_FORCE = -11.4;
-const JUMP_HOLD_DELAY_MS = 130;
-const JUMP_HOLD_MS = 260;
-const JUMP_HOLD_LIFT = 0.16;
+const JUMP_FORCE = -11;
+const JUMP_HOLD_DELAY_FRAMES = 5;
+const JUMP_HOLD_FRAMES = 18;
+const JUMP_HOLD_LIFT = 0.42;
 const SPEED = 4;
 
 const PLAYER_SPRITE_SRC = [
@@ -597,8 +597,8 @@ export function SierraNevadaGame() {
   const collectedRef = useRef<Animal[]>([]);
   const learnedRef = useRef<string[]>([]);
   const activeEffectRef = useRef<{ kind: PowerUpKind; until: number } | null>(null);
-  const jumpStartedAtRef = useRef(0);
-  const jumpBoostUntilRef = useRef(0);
+  const jumpHoldDelayFramesRef = useRef(0);
+  const jumpHoldFramesRef = useRef(0);
   const usedAnimalIdsRef = useRef<Set<string>>(new Set());
   const heartsRef = useRef(3); // lives tracking for spike hits // track animals used across levels
 
@@ -1275,12 +1275,18 @@ export function SierraNevadaGame() {
       player.vx = 0;
     }
 
-    const now = Date.now();
     const holdingJump = keys.Space || keys.ArrowUp || keys.KeyW || keys.mobileJump;
-    const heldLongEnough = jumpStartedAtRef.current > 0 && now - jumpStartedAtRef.current >= JUMP_HOLD_DELAY_MS;
     player.vy += GRAVITY;
-    if (holdingJump && heldLongEnough && jumpBoostUntilRef.current > now && player.vy < 0) {
-      player.vy -= JUMP_HOLD_LIFT;
+    if (holdingJump && jumpHoldFramesRef.current > 0 && player.vy < 0) {
+      if (jumpHoldDelayFramesRef.current > 0) {
+        jumpHoldDelayFramesRef.current -= 1;
+      } else {
+        player.vy -= JUMP_HOLD_LIFT;
+        jumpHoldFramesRef.current -= 1;
+      }
+    } else if (!holdingJump) {
+      jumpHoldDelayFramesRef.current = 0;
+      jumpHoldFramesRef.current = 0;
     }
     player.x += player.vx;
     player.y += player.vy;
@@ -1519,9 +1525,8 @@ export function SierraNevadaGame() {
     if (player.onGround) {
       player.vy = JUMP_FORCE;
       player.onGround = false;
-      const now = Date.now();
-      jumpStartedAtRef.current = now;
-      jumpBoostUntilRef.current = now + JUMP_HOLD_MS;
+      jumpHoldDelayFramesRef.current = JUMP_HOLD_DELAY_FRAMES;
+      jumpHoldFramesRef.current = JUMP_HOLD_FRAMES;
     }
   }, []);
 
@@ -1821,8 +1826,8 @@ export function SierraNevadaGame() {
       if (tag === "INPUT" || tag === "TEXTAREA") return;
       keysRef.current[event.code] = false;
       if (event.code === "Space" || event.code === "ArrowUp" || event.code === "KeyW") {
-        jumpStartedAtRef.current = 0;
-        jumpBoostUntilRef.current = 0;
+        jumpHoldDelayFramesRef.current = 0;
+        jumpHoldFramesRef.current = 0;
       }
     };
 
@@ -1861,8 +1866,8 @@ export function SierraNevadaGame() {
   const setMobileJump = (value: boolean) => {
     keysRef.current.mobileJump = value;
     if (!value) {
-      jumpStartedAtRef.current = 0;
-      jumpBoostUntilRef.current = 0;
+      jumpHoldDelayFramesRef.current = 0;
+      jumpHoldFramesRef.current = 0;
     }
   };
 
@@ -2089,11 +2094,24 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
             aria-label="Mover a la izquierda"
             onPointerDown={(event) => {
               event.preventDefault();
+              event.currentTarget.setPointerCapture(event.pointerId);
               setMobileKey("mobileLeft", true);
             }}
-            onPointerUp={() => setMobileKey("mobileLeft", false)}
-            onPointerLeave={() => setMobileKey("mobileLeft", false)}
-            onPointerCancel={() => setMobileKey("mobileLeft", false)}
+            onPointerUp={(event) => {
+              if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                event.currentTarget.releasePointerCapture(event.pointerId);
+              }
+              setMobileKey("mobileLeft", false);
+            }}
+            onPointerLeave={(event) => {
+              if (!event.currentTarget.hasPointerCapture(event.pointerId)) setMobileKey("mobileLeft", false);
+            }}
+            onPointerCancel={(event) => {
+              if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                event.currentTarget.releasePointerCapture(event.pointerId);
+              }
+              setMobileKey("mobileLeft", false);
+            }}
             onContextMenu={(event) => event.preventDefault()}
           >
             <ArrowIcon direction="left" />
@@ -2104,11 +2122,24 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
             aria-label="Mover a la derecha"
             onPointerDown={(event) => {
               event.preventDefault();
+              event.currentTarget.setPointerCapture(event.pointerId);
               setMobileKey("mobileRight", true);
             }}
-            onPointerUp={() => setMobileKey("mobileRight", false)}
-            onPointerLeave={() => setMobileKey("mobileRight", false)}
-            onPointerCancel={() => setMobileKey("mobileRight", false)}
+            onPointerUp={(event) => {
+              if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                event.currentTarget.releasePointerCapture(event.pointerId);
+              }
+              setMobileKey("mobileRight", false);
+            }}
+            onPointerLeave={(event) => {
+              if (!event.currentTarget.hasPointerCapture(event.pointerId)) setMobileKey("mobileRight", false);
+            }}
+            onPointerCancel={(event) => {
+              if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                event.currentTarget.releasePointerCapture(event.pointerId);
+              }
+              setMobileKey("mobileRight", false);
+            }}
             onContextMenu={(event) => event.preventDefault()}
           >
             <ArrowIcon direction="right" />
@@ -2121,12 +2152,25 @@ Responde SIEMPRE en español. Sé amigable, breve y educativo. Máximo 3 párraf
             aria-label="Saltar"
             onPointerDown={(event) => {
               event.preventDefault();
+              event.currentTarget.setPointerCapture(event.pointerId);
               setMobileJump(true);
               jump();
             }}
-            onPointerUp={() => setMobileJump(false)}
-            onPointerLeave={() => setMobileJump(false)}
-            onPointerCancel={() => setMobileJump(false)}
+            onPointerUp={(event) => {
+              if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                event.currentTarget.releasePointerCapture(event.pointerId);
+              }
+              setMobileJump(false);
+            }}
+            onPointerLeave={(event) => {
+              if (!event.currentTarget.hasPointerCapture(event.pointerId)) setMobileJump(false);
+            }}
+            onPointerCancel={(event) => {
+              if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+                event.currentTarget.releasePointerCapture(event.pointerId);
+              }
+              setMobileJump(false);
+            }}
             onContextMenu={(event) => event.preventDefault()}
           >
             <ArrowIcon direction="up" />
